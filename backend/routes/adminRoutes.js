@@ -1,17 +1,18 @@
-// routes/adminRoutes.js
 import express from 'express';
 import { admin } from '../middleware/admin.js';
 import { 
   getAdminDetails,
   getAllUsers,
-  updateUserRole  // Add this import
+  updateUserRole,
+  deleteUser
 } from '../controllers/adminController.js';
 
 const router = express.Router();
 
 // Protected admin routes
 router.get('/me', admin, getAdminDetails);
-router.get('/users', admin, getAllUsers);  // You might want to add this route too
+router.get('/users', admin, getAllUsers);
 router.patch('/users/:id/role', admin, updateUserRole);
+router.delete('/users/:id', admin, deleteUser);
 
 export default router;

@@ -8,6 +8,7 @@ import {
   updateReservationStatus,
   getCustomerFeedback,
   startShift,
+  getActiveShift,
   endShift
 } from '../controllers/staffController.js';
 
@@ -30,5 +31,7 @@ router.get('/feedback', staff, getCustomerFeedback);
 // Shift management
 router.post('/shift/start', staff, startShift);
 router.post('/shift/end', staff, endShift);
+router.get('/shift/active', staff, getActiveShift);
+
 
 export default router;

@@ -175,23 +175,29 @@ export const getCustomerFeedback = async (req, res) => {
   }
 };
 
+// In staffController.js - startShift function
 export const startShift = async (req, res) => {
   try {
     const staffId = req.user._id;
     
-    // Check if there's an active shift
+    // Check for existing active shift
     const activeShift = await StaffShift.findOne({
       staff: staffId,
       endTime: null
     });
     
     if (activeShift) {
-      return res.status(400).json({
-        status: 'fail',
-        message: 'You already have an active shift'
+      // Instead of returning error, return the existing shift
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          shift: activeShift,
+          startTime: activeShift.startTime
+        }
       });
     }
     
+    // Create new shift if none exists
     const shift = await StaffShift.create({
       staff: staffId,
       startTime: new Date()
@@ -199,9 +205,13 @@ export const startShift = async (req, res) => {
     
     res.status(200).json({
       status: 'success',
-      data: shift
+      data: {
+        shift,
+        startTime: shift.startTime
+      }
     });
   } catch (err) {
+    console.error('Error in startShift:', err);
     res.status(500).json({
       status: 'error',
       message: err.message
@@ -244,4 +254,31 @@ export const endShift = async (req, res) => {
     });
   }
 };
-
+export const getActiveShift = async (req, res) => {
+  try {
+    const staffId = req.user._id;
+    
+    const activeShift = await StaffShift.findOne({
+      staff: staffId,
+      endTime: null
+    });
+    
+    if (!activeShift) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'No active shift found'
+      });
+    }
+    
+    res.status(200).json({
+      status: 'success',
+      data: activeShift
+    });
+  } catch (err) {
+    console.error('Error in getActiveShift:', err);
+    res.status(500).json({
+      status: 'error',
+      message: err.message
+    });
+  }
+};

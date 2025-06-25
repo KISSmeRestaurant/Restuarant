@@ -2,7 +2,6 @@ import User from '../models/User.js';
 
 export const getAdminDetails = async (req, res, next) => {
   try {
-    // The admin middleware already attaches the user to req.user
     const admin = req.user;
     
     if (!admin) {
@@ -12,7 +11,6 @@ export const getAdminDetails = async (req, res, next) => {
       });
     }
 
-    // Return minimal necessary admin details
     res.status(200).json({
       status: 'success',
       data: {
@@ -32,7 +30,6 @@ export const getAdminDetails = async (req, res, next) => {
   }
 };
 
-// controllers/adminController.js
 export const getAllUsers = async (req, res, next) => {
   try {
     const users = await User.find()
@@ -42,7 +39,7 @@ export const getAllUsers = async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       results: users.length,
-      data: users // Changed from { users } to just users
+      data: users
     });
   } catch (err) {
     next(err);
@@ -54,7 +51,6 @@ export const updateUserRole = async (req, res, next) => {
     const { id } = req.params;
     const { role } = req.body;
 
-    // Validate role
     if (!['user', 'staff', 'admin'].includes(role)) {
       return res.status(400).json({
         status: 'fail',
@@ -79,6 +75,32 @@ export const updateUserRole = async (req, res, next) => {
       status: 'success',
       data: user
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (req.user._id.toString() === id) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'You cannot delete your own account'
+      });
+    }
+
+    const user = await User.findByIdAndDelete(id);
+
+    if (!user) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'User not found'
+      });
+    }
+
+    res.status(204).end();
   } catch (err) {
     next(err);
   }

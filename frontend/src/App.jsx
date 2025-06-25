@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { ToastContainer } from 'react-toastify';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -20,6 +21,7 @@ import Cart from './components/common/Cart';
 import OrderDetail from './pages/users/OrderDetail';  
 import UserOrders from './pages/users/UserOrders';  
 import './styles/global.css';
+import 'react-toastify/dist/ReactToastify.css';
 
 const App = () => {
   const [darkMode, setDarkMode] = useState(() => {
@@ -146,7 +148,10 @@ const App = () => {
         </Routes>
       </div>
     </Router>
+
+    
   );
+  <ToastContainer />
 };
 
 export default App;

@@ -52,111 +52,126 @@ const StaffDashboard = () => {
     return () => clearInterval(interval);
   }, [shiftStatus, shiftStartTime]);
 
-  // Fetch data
-useEffect(() => {
-  const fetchData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      // Fetch staff details
-      const staffResponse = await fetch('http://localhost:5000/api/staff/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-      });
-
-      if (!staffResponse.ok) {
-        if (staffResponse.status === 401) {
-          localStorage.removeItem('token');
-          navigate('/login');
-          return;
-        }
-        throw new Error('Failed to fetch staff details');
-      }
-
-      const staffData = await staffResponse.json();
-      setStaffDetails(staffData.data);
-
-      // Fetch all data with error handling for each
-      await Promise.all([
-        fetchOrders(token).catch(err => {
-          console.error('Error fetching orders:', err);
-          setError(prev => prev + ' Failed to load orders.');
-        }),
-        fetchReservations(token).catch(err => {
-          console.error('Error fetching reservations:', err);
-          setError(prev => prev + ' Failed to load reservations.');
-        }),
-        fetchCustomerFeedback(token).catch(err => {
-          console.error('Error fetching feedback:', err);
-          setError(prev => prev + ' Failed to load feedback.');
-        })
-      ]);
-
-    } catch (err) {
-      console.error('Error in fetchData:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-    const fetchOrders = async (token) => {
-      const response = await fetch('http://localhost:5000/api/staff/orders', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      setOrders(data.data);
-      checkForNewOrders(data.data);
-    };
-
-    const fetchReservations = async (token) => {
-  try {
-    const response = await fetch('http://localhost:5000/api/staff/reservations', {
+  // Fetch functions
+  const fetchOrders = async (token) => {
+    const response = await fetch('http://localhost:5000/api/staff/orders', {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
     });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
     const data = await response.json();
-    
-    // Handle both possible response formats:
-    // 1. Direct array of reservations
-    // 2. Object with data property containing array
-    const reservationsData = Array.isArray(data) ? data : (data.data || []);
-    
-    setReservations(reservationsData);
-    checkForNewReservations(reservationsData);
-    
-  } catch (error) {
-    console.error('Error fetching reservations:', error);
-    setError('Failed to load reservations. Please try again.');
-    setReservations([]); // Set empty array on error
-  }
-};
-    const fetchCustomerFeedback = async (token) => {
-      const response = await fetch('http://localhost:5000/api/staff/feedback', {
+    setOrders(data.data);
+    checkForNewOrders(data.data);
+  };
+
+  const fetchReservations = async (token) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/staff/reservations', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
-      setCustomerFeedback(data.data);
+      const reservationsData = Array.isArray(data) ? data : (data.data || []);
+      setReservations(reservationsData);
+      checkForNewReservations(reservationsData);
+    } catch (error) {
+      console.error('Error fetching reservations:', error);
+      setError('Failed to load reservations. Please try again.');
+      setReservations([]);
+    }
+  };
+
+  const fetchCustomerFeedback = async (token) => {
+    const response = await fetch('http://localhost:5000/api/staff/feedback', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    const data = await response.json();
+    setCustomerFeedback(data.data);
+  };
+
+  // Initial data fetching
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        // Fetch staff details
+        const staffResponse = await fetch('http://localhost:5000/api/staff/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+        });
+
+        if (!staffResponse.ok) {
+          if (staffResponse.status === 401) {
+            localStorage.removeItem('token');
+            navigate('/login');
+            return;
+          }
+          throw new Error('Failed to fetch staff details');
+        }
+
+        const staffData = await staffResponse.json();
+        setStaffDetails(staffData.data);
+
+        await Promise.all([
+          fetchOrders(token),
+          fetchReservations(token),
+          fetchCustomerFeedback(token)
+        ]);
+      } catch (err) {
+        console.error('Error in fetchData:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
   }, [navigate]);
+
+  // Check for active shift
+useEffect(() => {
+  const fetchActiveShift = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/staff/shift/active', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.data) {
+          setShiftStatus('active');
+          setShiftStartTime(new Date(data.data.startTime));
+        }
+      } else if (response.status === 404) {
+        // No active shift found is okay
+        setShiftStatus('notStarted');
+      }
+    } catch (err) {
+      console.error('Error checking active shift:', err);
+    }
+  };
+
+  fetchActiveShift();
+}, [navigate]);
 
   // Check for new orders/reservations
   const checkForNewOrders = (newOrders) => {
@@ -215,7 +230,6 @@ useEffect(() => {
         order._id === orderId ? { ...order, status: newStatus } : order
       ));
       
-      // Add notification for status change
       const order = orders.find(o => o._id === orderId);
       if (order) {
         addNotification(`Order #${orderId.slice(-6)} status changed to ${newStatus}`);
@@ -243,7 +257,6 @@ useEffect(() => {
         res._id === reservationId ? { ...res, status: newStatus } : res
       ));
       
-      // Add notification for status change
       const reservation = reservations.find(r => r._id === reservationId);
       if (reservation) {
         addNotification(`Reservation #${reservationId.slice(-6)} status changed to ${newStatus}`);
@@ -253,25 +266,48 @@ useEffect(() => {
     }
   };
 
-  const startShift = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/staff/shift/start', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+const startShift = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:5000/api/staff/shift/start', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({}) // Empty body is fine
+    });
 
-      if (!response.ok) throw new Error('Failed to start shift');
-      
-      setShiftStatus('active');
-      setShiftStartTime(new Date());
-      addNotification('Shift started');
-    } catch (err) {
-      setError(err.message);
+    if (!response.ok) {
+      const errorData = await response.json();
+      // Handle "already active" error differently
+      if (errorData.message === 'You already have an active shift') {
+        // Fetch the existing active shift instead
+        const activeShiftResponse = await fetch('http://localhost:5000/api/staff/shift/active', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          }
+        });
+        
+        if (activeShiftResponse.ok) {
+          const activeShiftData = await activeShiftResponse.json();
+          setShiftStatus('active');
+          setShiftStartTime(new Date(activeShiftData.data.startTime));
+          return;
+        }
+      }
+      throw new Error(errorData.message || 'Failed to start shift');
     }
-  };
+    
+    const data = await response.json();
+    setShiftStatus('active');
+    setShiftStartTime(new Date(data.data.startTime));
+    addNotification('Shift started');
+  } catch (err) {
+    console.error('Shift start error:', err);
+    setError(err.message);
+  }
+};
 
   const endShift = async () => {
     try {
@@ -341,16 +377,17 @@ useEffect(() => {
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50'}`}>
       <Header 
-        staffDetails={staffDetails} 
-        shiftStatus={shiftStatus} 
-        startShift={startShift} 
-        endShift={endShift}
-        shiftDuration={shiftDuration}
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
-        notifications={notifications}
-        markNotificationAsRead={markNotificationAsRead}
-      />
+  staffDetails={staffDetails} 
+  shiftStatus={shiftStatus} 
+  startShift={startShift} 
+  endShift={endShift}
+  shiftDuration={shiftDuration}
+  shiftStartTime={shiftStartTime}  // Add this
+  darkMode={darkMode}
+  setDarkMode={setDarkMode}
+  notifications={notifications}
+  markNotificationAsRead={markNotificationAsRead}
+/>
 
       {/* Search Bar */}
       <div className={`sticky top-0 z-10 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md p-4`}>
@@ -453,13 +490,13 @@ useEffect(() => {
         )}
 
         {activeTab === 'reservations' && (
-  <ReservationsTab 
-    reservations={filteredReservations} 
-    updateReservationStatus={updateReservationStatus}
-    darkMode={darkMode}
-    isLoading={loading}
-  />
-)}
+          <ReservationsTab 
+            reservations={filteredReservations} 
+            updateReservationStatus={updateReservationStatus}
+            darkMode={darkMode}
+            isLoading={loading}
+          />
+        )}
 
         {activeTab === 'kitchen' && (
           <KitchenTab 

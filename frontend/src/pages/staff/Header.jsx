@@ -8,6 +8,7 @@ const Header = ({
   startShift, 
   endShift,
   shiftDuration,
+  shiftStartTime,  // Make sure this prop is passed from StaffDashboard
   darkMode,
   setDarkMode,
   notifications,
@@ -24,10 +25,15 @@ const Header = ({
           </h1>
           
           <div className="flex items-center space-x-6">
-            {shiftStatus === 'active' && (
+            {shiftStatus === 'active' && shiftStartTime && (
               <div className={`flex items-center ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                 <FaClock className="mr-2 text-xl" />
-                <span className="font-medium">{shiftDuration}</span>
+                <div className="flex flex-col">
+                  <span className="font-medium">{shiftDuration}</span>
+                  <span className="text-xs">
+                    Started at: {new Date(shiftStartTime).toLocaleTimeString()}
+                  </span>
+                </div>
               </div>
             )}
             
