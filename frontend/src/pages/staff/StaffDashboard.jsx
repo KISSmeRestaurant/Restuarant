@@ -36,23 +36,80 @@ const StaffDashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const navigate = useNavigate();
 
-  // Calculate shift duration
-  useEffect(() => {
-    let interval;
-    if (shiftStatus === 'active' && shiftStartTime) {
-      interval = setInterval(() => {
-        const now = new Date();
-        const diff = now - new Date(shiftStartTime);
-        const hours = Math.floor(diff / (1000 * 60 * 60)).toString().padStart(2, '0');
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
-        setShiftDuration(`${hours}:${minutes}:${seconds}`);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [shiftStatus, shiftStartTime]);
+  // Helper functions
+  const addNotification = (message) => {
+    const newNotification = {
+      id: Date.now(),
+      message,
+      timestamp: new Date().toLocaleTimeString(),
+      read: false
+    };
+    setNotifications(prev => [newNotification, ...prev]);
+  };
 
-  // Fetch functions
+  const markNotificationAsRead = (id) => {
+    setNotifications(prev => 
+      prev.map(n => n.id === id ? { ...n, read: true } : n)
+    );
+  };
+
+  const checkForNewOrders = (newOrders) => {
+    if (orders.length > 0 && newOrders.length > orders.length) {
+      const newOrder = newOrders.find(order => 
+        !orders.some(o => o._id === order._id)
+      );
+      if (newOrder) {
+        addNotification(`New order #${newOrder._id.slice(-6)} received`);
+      }
+    }
+  };
+
+  const checkForNewReservations = (newReservations) => {
+    if (reservations.length > 0 && newReservations.length > reservations.length) {
+      const newReservation = newReservations.find(res => 
+        !reservations.some(r => r._id === res._id)
+      );
+      if (newReservation) {
+        addNotification(`New reservation from ${newReservation.name}`);
+      }
+    }
+  };
+
+  // Data fetching functions
+  const fetchActiveShift = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/staff/shift/active', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.data) {
+          setShiftStatus('active');
+          setShiftStartTime(new Date(data.data.startTime));
+          
+          // Calculate initial duration
+          const now = new Date();
+          const diff = now - new Date(data.data.startTime);
+          const hours = Math.floor(diff / (1000 * 60 * 60)).toString().padStart(2, '0');
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+          setShiftDuration(`${hours}:${minutes}:${seconds}`);
+        } else {
+          setShiftStatus('notStarted');
+        }
+      } else if (response.status === 404) {
+        setShiftStatus('notStarted');
+      }
+    } catch (err) {
+      console.error('Error checking active shift:', err);
+      setShiftStatus('notStarted');
+    }
+  };
+
   const fetchOrders = async (token) => {
     const response = await fetch('http://localhost:5000/api/staff/orders', {
       headers: {
@@ -97,121 +154,80 @@ const StaffDashboard = () => {
     setCustomerFeedback(data.data);
   };
 
-  // Initial data fetching
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-
-        // Fetch staff details
-        const staffResponse = await fetch('http://localhost:5000/api/staff/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-        });
-
-        if (!staffResponse.ok) {
-          if (staffResponse.status === 401) {
-            localStorage.removeItem('token');
-            navigate('/login');
-            return;
-          }
-          throw new Error('Failed to fetch staff details');
-        }
-
-        const staffData = await staffResponse.json();
-        setStaffDetails(staffData.data);
-
-        await Promise.all([
-          fetchOrders(token),
-          fetchReservations(token),
-          fetchCustomerFeedback(token)
-        ]);
-      } catch (err) {
-        console.error('Error in fetchData:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [navigate]);
-
-  // Check for active shift
-useEffect(() => {
-  const fetchActiveShift = async () => {
+  // Shift management functions
+  const startShift = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/staff/shift/active', {
+      const response = await fetch('http://localhost:5000/api/staff/shift/start', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.message === 'You already have an active shift') {
+          // If shift already exists, fetch it
+          const activeShiftResponse = await fetch('http://localhost:5000/api/staff/shift/active', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            }
+          });
+          
+          if (activeShiftResponse.ok) {
+            const activeShiftData = await activeShiftResponse.json();
+            setShiftStatus('active');
+            setShiftStartTime(new Date(activeShiftData.data.startTime));
+            
+            // Calculate initial duration
+            const now = new Date();
+            const diff = now - new Date(activeShiftData.data.startTime);
+            const hours = Math.floor(diff / (1000 * 60 * 60)).toString().padStart(2, '0');
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+            setShiftDuration(`${hours}:${minutes}:${seconds}`);
+            
+            return;
+          }
+        }
+        throw new Error(errorData.message || 'Failed to start shift');
+      }
+      
+      const data = await response.json();
+      setShiftStatus('active');
+      setShiftStartTime(new Date(data.data.startTime));
+      setShiftDuration('00:00:00');
+      addNotification('Shift started');
+    } catch (err) {
+      console.error('Shift start error:', err);
+      setError(err.message);
+    }
+  };
+
+  const endShift = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/staff/shift/end', {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.data) {
-          setShiftStatus('active');
-          setShiftStartTime(new Date(data.data.startTime));
-        }
-      } else if (response.status === 404) {
-        // No active shift found is okay
-        setShiftStatus('notStarted');
-      }
+      if (!response.ok) throw new Error('Failed to end shift');
+      
+      setShiftStatus('ended');
+      setShiftDuration('00:00:00');
+      addNotification('Shift ended');
     } catch (err) {
-      console.error('Error checking active shift:', err);
+      setError(err.message);
     }
   };
 
-  fetchActiveShift();
-}, [navigate]);
-
-  // Check for new orders/reservations
-  const checkForNewOrders = (newOrders) => {
-    if (orders.length > 0 && newOrders.length > orders.length) {
-      const newOrder = newOrders.find(order => 
-        !orders.some(o => o._id === order._id)
-      );
-      if (newOrder) {
-        addNotification(`New order #${newOrder._id.slice(-6)} received`);
-      }
-    }
-  };
-
-  const checkForNewReservations = (newReservations) => {
-    if (reservations.length > 0 && newReservations.length > reservations.length) {
-      const newReservation = newReservations.find(res => 
-        !reservations.some(r => r._id === res._id)
-      );
-      if (newReservation) {
-        addNotification(`New reservation from ${newReservation.name}`);
-      }
-    }
-  };
-
-  const addNotification = (message) => {
-    const newNotification = {
-      id: Date.now(),
-      message,
-      timestamp: new Date().toLocaleTimeString(),
-      read: false
-    };
-    setNotifications(prev => [newNotification, ...prev]);
-  };
-
-  const markNotificationAsRead = (id) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
-  };
-
+  // Update functions
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       const token = localStorage.getItem('token');
@@ -266,68 +282,71 @@ useEffect(() => {
     }
   };
 
-const startShift = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:5000/api/staff/shift/start', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({}) // Empty body is fine
-    });
+  // Calculate shift duration
+  useEffect(() => {
+    let interval;
+    if (shiftStatus === 'active' && shiftStartTime) {
+      interval = setInterval(() => {
+        const now = new Date();
+        const diff = now - new Date(shiftStartTime);
+        const hours = Math.floor(diff / (1000 * 60 * 60)).toString().padStart(2, '0');
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+        setShiftDuration(`${hours}:${minutes}:${seconds}`);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [shiftStatus, shiftStartTime]);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      // Handle "already active" error differently
-      if (errorData.message === 'You already have an active shift') {
-        // Fetch the existing active shift instead
-        const activeShiftResponse = await fetch('http://localhost:5000/api/staff/shift/active', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          }
-        });
+  // Initial data fetching
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('token');
         
-        if (activeShiftResponse.ok) {
-          const activeShiftData = await activeShiftResponse.json();
-          setShiftStatus('active');
-          setShiftStartTime(new Date(activeShiftData.data.startTime));
+        if (!token) {
+          navigate('/login');
           return;
         }
+
+        // First check for active shift
+        await fetchActiveShift();
+
+        // Then fetch other data
+        const staffResponse = await fetch('http://localhost:5000/api/staff/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+        });
+
+        if (!staffResponse.ok) {
+          if (staffResponse.status === 401) {
+            localStorage.removeItem('token');
+            navigate('/login');
+            return;
+          }
+          throw new Error('Failed to fetch staff details');
+        }
+
+        const staffData = await staffResponse.json();
+        setStaffDetails(staffData.data);
+
+        await Promise.all([
+          fetchOrders(token),
+          fetchReservations(token),
+          fetchCustomerFeedback(token)
+        ]);
+      } catch (err) {
+        console.error('Error in fetchData:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-      throw new Error(errorData.message || 'Failed to start shift');
-    }
-    
-    const data = await response.json();
-    setShiftStatus('active');
-    setShiftStartTime(new Date(data.data.startTime));
-    addNotification('Shift started');
-  } catch (err) {
-    console.error('Shift start error:', err);
-    setError(err.message);
-  }
-};
+    };
 
-  const endShift = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/staff/shift/end', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to end shift');
-      
-      setShiftStatus('ended');
-      setShiftDuration('00:00:00');
-      addNotification('Shift ended');
-    } catch (err) {
-      setError(err.message);
-    }
-  };
+    fetchData();
+  }, [navigate]);
 
   // Filter data based on search query
   const filteredOrders = useMemo(() => {
@@ -377,17 +396,17 @@ const startShift = async () => {
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50'}`}>
       <Header 
-  staffDetails={staffDetails} 
-  shiftStatus={shiftStatus} 
-  startShift={startShift} 
-  endShift={endShift}
-  shiftDuration={shiftDuration}
-  shiftStartTime={shiftStartTime}  // Add this
-  darkMode={darkMode}
-  setDarkMode={setDarkMode}
-  notifications={notifications}
-  markNotificationAsRead={markNotificationAsRead}
-/>
+        staffDetails={staffDetails} 
+        shiftStatus={shiftStatus} 
+        startShift={startShift} 
+        endShift={endShift}
+        shiftDuration={shiftDuration}
+        shiftStartTime={shiftStartTime}
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+        notifications={notifications}
+        markNotificationAsRead={markNotificationAsRead}
+      />
 
       {/* Search Bar */}
       <div className={`sticky top-0 z-10 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md p-4`}>

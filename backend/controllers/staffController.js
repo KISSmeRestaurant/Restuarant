@@ -261,7 +261,7 @@ export const getActiveShift = async (req, res) => {
     const activeShift = await StaffShift.findOne({
       staff: staffId,
       endTime: null
-    });
+    }).sort({ startTime: -1 }); // Get the most recent shift
     
     if (!activeShift) {
       return res.status(404).json({

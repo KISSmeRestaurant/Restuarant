@@ -22,7 +22,8 @@ const Menu = () => {
     phone: '',
     address: '',
     city: '',
-    notes: ''
+    notes: '',
+    deliveryOption: 'delivery' // Added delivery option
   });
 
   const isLoggedIn = !!localStorage.getItem('token');
@@ -37,7 +38,10 @@ const Menu = () => {
           axios.get('http://localhost:5000/api/foods')
         ]);
         setCategories(categoriesRes.data);
-        setFoodItems(foodRes.data);
+        setFoodItems(foodRes.data.map(item => ({
+          ...item,
+          foodType: item.foodType || 'non-veg' // Default to non-veg if not specified
+        })));
       } catch (error) {
         console.error('Error fetching data:', error);
         setError('Failed to load menu. Please try again later.');
@@ -80,13 +84,10 @@ const Menu = () => {
   const filteredItems = activeCategory === 'all' 
     ? foodItems 
     : foodItems.filter(item => {
-        // Find the category object that matches the item's category name
-        const categoryObj = categories.find(cat => cat.name === item.category);
-        // Compare with activeCategory which could be ID or name
-        return categoryObj ? 
-          (categoryObj._id === activeCategory || categoryObj.name === activeCategory) : 
-          false;
-      });;
+        const categoryObj = categories.find(cat => cat._id === item.category || cat.name === item.category);
+        return categoryObj ? true : false;
+      });
+
   // Cart functions
   const handleAddToCart = (item) => {
     if (!isLoggedIn) {
@@ -107,7 +108,10 @@ const Menu = () => {
   };
 
   const updateCartItem = (id, newQuantity) => {
-    if (newQuantity < 1) return;
+    if (newQuantity < 1) {
+      removeFromCart(id);
+      return;
+    }
     setCart(cart.map(item => 
       item._id === id ? { ...item, quantity: newQuantity } : item
     ));
@@ -140,7 +144,8 @@ const Menu = () => {
           quantity: item.quantity,
           price: item.price
         })),
-        deliveryInfo
+        deliveryInfo,
+        paymentMethod: 'cash' // Default to cash on delivery
       };
 
       const response = await axios.post('http://localhost:5000/api/orders', orderData, {
@@ -153,7 +158,8 @@ const Menu = () => {
       setOrderDetails({
         ...response.data,
         orderId: response.data._id,
-        customerInfo: response.data.deliveryInfo
+        customerInfo: response.data.deliveryInfo,
+        estimatedDelivery: new Date(Date.now() + 45*60000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
       });
       
       setCheckoutStep('confirmation');
@@ -169,8 +175,9 @@ const Menu = () => {
 
   // Calculate totals
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const deliveryFee = deliveryInfo.deliveryOption === 'delivery' ? 5 : 0;
   const tax = subtotal * 0.1;
-  const total = subtotal + tax;
+  const total = subtotal + tax + deliveryFee;
 
   // Render components based on checkout step
   const renderStep = () => {
@@ -181,6 +188,7 @@ const Menu = () => {
             cart={cart}
             subtotal={subtotal}
             tax={tax}
+            deliveryFee={deliveryFee}
             total={total}
             updateCartItem={updateCartItem}
             removeFromCart={removeFromCart}
@@ -195,6 +203,7 @@ const Menu = () => {
             cart={cart}
             subtotal={subtotal}
             tax={tax}
+            deliveryFee={deliveryFee}
             total={total}
             onChange={handleDeliveryInfoChange}
             onSubmit={handlePlaceOrder}

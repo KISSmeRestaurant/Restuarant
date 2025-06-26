@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiX } from 'react-icons/fi';
 import SearchBar from '../common/SearchBar';
 import MenuItem from './MenuItem';
 import LoginModal from './LoginModal';
@@ -22,21 +22,19 @@ const MenuPage = ({
   error
 }) => {
   const [searchResults, setSearchResults] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const menuItemsRef = useRef(null);
+  const [showMobileCategories, setShowMobileCategories] = useState(false);
   const displayItems = searchResults || filteredItems;
 
-  const scrollLeft = () => {
-    if (menuItemsRef.current) {
-      menuItemsRef.current.scrollBy({ left: -300, behavior: 'smooth' });
-    }
-  };
-
-  const scrollRight = () => {
-    if (menuItemsRef.current) {
-      menuItemsRef.current.scrollBy({ left: 300, behavior: 'smooth' });
-    }
-  };
+  // Close mobile categories when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (showMobileCategories && !e.target.closest('.mobile-categories')) {
+        setShowMobileCategories(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMobileCategories]);
 
   return (
     <div className="bg-gradient-to-b from-amber-50 to-white min-h-screen">
@@ -80,16 +78,102 @@ const MenuPage = ({
           />
         </motion.div>
 
+        {/* Mobile Category Toggle */}
+        <div className="md:hidden mb-6">
+          <button
+            onClick={() => setShowMobileCategories(!showMobileCategories)}
+            className="w-full bg-amber-600 text-white py-3 rounded-lg font-medium flex items-center justify-center"
+          >
+            {showMobileCategories ? 'Hide Categories' : 'Browse Categories'}
+          </button>
+        </div>
+
+        {/* Mobile Categories Panel */}
+        {showMobileCategories && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mobile-categories md:hidden fixed inset-0 z-50 bg-white p-6 overflow-y-auto"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Categories</h2>
+              <button 
+                onClick={() => setShowMobileCategories(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <FiX size={24} />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <motion.div 
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => {
+                  onCategoryChange('all');
+                  setShowMobileCategories(false);
+                }}
+                className={`p-4 rounded-xl shadow-md flex flex-col items-center ${
+                  activeCategory === 'all' 
+                    ? 'bg-amber-600 text-white' 
+                    : 'bg-white text-gray-800'
+                }`}
+              >
+                <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-2">
+                  <span className="text-amber-600 font-bold">ALL</span>
+                </div>
+                <span className="font-medium">All Menu</span>
+              </motion.div>
+              
+              {categories.map(category => (
+                <motion.div 
+                  key={category._id}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => {
+                    onCategoryChange(category._id);
+                    setShowMobileCategories(false);
+                  }}
+                  className={`p-4 rounded-xl shadow-md flex flex-col items-center ${
+                    activeCategory === category._id 
+                      ? 'bg-amber-600 text-white' 
+                      : 'bg-white text-gray-800'
+                  }`}
+                >
+                  <div className="w-16 h-16 rounded-full bg-gray-100 overflow-hidden mb-2">
+                    {category.imageUrl ? (
+                      <img 
+                        src={category.imageUrl} 
+                        alt={category.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
+                        <span className="text-gray-600 text-xs text-center px-1">
+                          {category.name.split(' ')[0]}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <span className="font-medium text-center capitalize">
+                    {category.name.length > 12 ? `${category.name.substring(0, 10)}...` : category.name}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* Circular Category Selector */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="mb-16"
+          className="mb-16 hidden md:block"
         >
           <h2 className="text-2xl font-bold text-gray-800 mb-8 text-center">Categories</h2>
           
-          <div className="flex items-center justify-center space-x-2 md:space-x-4 lg:space-x-6 overflow-x-auto py-4 px-2 hide-scrollbar">
+          <div className="flex items-center justify-center flex-wrap gap-4 py-4">
             {/* All Categories button */}
             <motion.div 
               whileHover={{ scale: 1.05 }}
@@ -152,7 +236,6 @@ const MenuPage = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="relative"
         >
           <h2 className="text-2xl font-bold text-gray-800 mb-8 text-center">
             {activeCategory === 'all' ? 'All Menu Items' : 
@@ -168,54 +251,24 @@ const MenuPage = ({
               ></motion.div>
             </div>
           ) : displayItems.length > 0 ? (
-            <div className="relative">
-              <button 
-                onClick={scrollLeft}
-                className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-md hover:bg-amber-50 transition-colors"
-                aria-label="Scroll left"
-              >
-                <FiChevronLeft className="text-amber-600 w-6 h-6" />
-              </button>
-              
-              <div 
-                ref={menuItemsRef}
-                className="flex space-x-6 overflow-x-auto py-4 px-2 hide-scrollbar"
-                onMouseDown={() => setIsDragging(true)}
-                onMouseUp={() => setIsDragging(false)}
-                onMouseLeave={() => setIsDragging(false)}
-                onMouseMove={(e) => {
-                  if (isDragging && menuItemsRef.current) {
-                    menuItemsRef.current.scrollLeft -= e.movementX;
-                  }
-                }}
-              >
-                <AnimatePresence>
-                  {displayItems.map((item, index) => (
-                    <motion.div
-                      key={item._id}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="flex-shrink-0 w-64"
-                    >
-                      <MenuItem 
-                        item={item}
-                        index={index}
-                        onAddToCart={onAddToCart}
-                      />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-
-              <button 
-                onClick={scrollRight}
-                className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-md hover:bg-amber-50 transition-colors"
-                aria-label="Scroll right"
-              >
-                <FiChevronRight className="text-amber-600 w-6 h-6" />
-              </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <AnimatePresence>
+                {displayItems.map((item, index) => (
+                  <motion.div
+                    key={item._id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <MenuItem 
+                      item={item}
+                      index={index}
+                      onAddToCart={onAddToCart}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           ) : (
             <motion.div
@@ -250,37 +303,6 @@ const MenuPage = ({
           />
         )}
       </div>
-
-      {/* Footer Wave */}
-      <div className="w-full overflow-hidden">
-        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="w-full">
-          <path 
-            d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" 
-            opacity=".25" 
-            className="fill-amber-200"
-          ></path>
-          <path 
-            d="M0,0V15.81C13,36.92,27.64,56.86,47.69,72.05,99.41,111.27,165,111,224.58,91.58c31.15-10.15,60.09-26.07,89.67-39.8,40.92-19,84.73-46,130.83-49.67,36.26-2.85,70.9,9.42,98.6,31.56,31.77,25.39,62.32,62,103.63,73,40.44,10.79,81.35-6.69,119.13-24.28s75.16-39,116.92-43.05c59.73-5.85,113.28,22.88,168.9,38.84,30.2,8.66,59,6.17,87.09-7.5,22.43-10.89,48-26.93,60.65-49.24V0Z" 
-            opacity=".5" 
-            className="fill-amber-200"
-          ></path>
-          <path 
-            d="M0,0V5.63C149.93,59,314.09,71.32,475.83,42.57c43-7.64,84.23-20.12,127.61-26.46,59-8.63,112.48,12.24,165.56,35.4C827.93,77.22,886,95.24,951.2,90c86.53-7,172.46-45.71,248.8-84.81V0Z" 
-            className="fill-amber-300"
-          ></path>
-        </svg>
-      </div>
-
-      {/* Global Styles */}
-      <style jsx global>{`
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </div>
   );
 };
