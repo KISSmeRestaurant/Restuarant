@@ -13,7 +13,7 @@ export const fetchWithAuth = async (url, options = {}) => {
   // If token expired, try to refresh it
   if (response.status === 401) {
     try {
-      const refreshResponse = await fetch('http://localhost:5000/api/refresh-token', {
+      const refreshResponse = await fetch('https://restuarant-sh57.onrender.com/api/refresh-token', {
         method: 'POST',
         credentials: 'include'
       });

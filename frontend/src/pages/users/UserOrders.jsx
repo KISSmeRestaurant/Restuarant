@@ -14,7 +14,7 @@ const UserOrders = () => {
       try {
         setError(null);
         const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:5000/api/orders/my-orders', {
+        const response = await axios.get('https://restuarant-sh57.onrender.com/api/orders/my-orders', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -37,7 +37,7 @@ const UserOrders = () => {
     try {
       setError(null);
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/orders/${orderId}/cancel`, 
+      await axios.put(`https://restuarant-sh57.onrender.com/api/orders/${orderId}/cancel`, 
         {},
         {
           headers: {

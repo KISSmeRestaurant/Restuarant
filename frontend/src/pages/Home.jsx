@@ -20,7 +20,7 @@ const Home = () => {
   useEffect(() => {
     const fetchRecentFoods = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/foods/recent');
+        const response = await axios.get('https://restuarant-sh57.onrender.com/api/foods/recent');
         setRecentFoods(response.data);
       } catch (error) {
         console.error('Error fetching recent foods:', error);

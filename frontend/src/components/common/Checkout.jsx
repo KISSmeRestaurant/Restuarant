@@ -39,7 +39,7 @@ const Checkout = ({ cart, onBack, onOrderSuccess }) => {
       deliveryInfo: formData
     };
 
-    const response = await axios.post('http://localhost:5000/api/orders', orderData, {
+    const response = await axios.post('https://restuarant-sh57.onrender.com/api/orders', orderData, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'

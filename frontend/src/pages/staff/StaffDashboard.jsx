@@ -79,7 +79,7 @@ const StaffDashboard = () => {
   const fetchActiveShift = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/staff/shift/active', {
+      const response = await fetch('https://restuarant-sh57.onrender.com/api/staff/shift/active', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -111,7 +111,7 @@ const StaffDashboard = () => {
   };
 
   const fetchOrders = async (token) => {
-    const response = await fetch('http://localhost:5000/api/staff/orders', {
+    const response = await fetch('https://restuarant-sh57.onrender.com/api/staff/orders', {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -123,7 +123,7 @@ const StaffDashboard = () => {
 
   const fetchReservations = async (token) => {
     try {
-      const response = await fetch('http://localhost:5000/api/staff/reservations', {
+      const response = await fetch('https://restuarant-sh57.onrender.com/api/staff/reservations', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -145,7 +145,7 @@ const StaffDashboard = () => {
   };
 
   const fetchCustomerFeedback = async (token) => {
-    const response = await fetch('http://localhost:5000/api/staff/feedback', {
+    const response = await fetch('https://restuarant-sh57.onrender.com/api/staff/feedback', {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -158,7 +158,7 @@ const StaffDashboard = () => {
   const startShift = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/staff/shift/start', {
+      const response = await fetch('https://restuarant-sh57.onrender.com/api/staff/shift/start', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -171,7 +171,7 @@ const StaffDashboard = () => {
         const errorData = await response.json();
         if (errorData.message === 'You already have an active shift') {
           // If shift already exists, fetch it
-          const activeShiftResponse = await fetch('http://localhost:5000/api/staff/shift/active', {
+          const activeShiftResponse = await fetch('https://restuarant-sh57.onrender.com/api/staff/shift/active', {
             headers: {
               'Authorization': `Bearer ${token}`,
             }
@@ -210,7 +210,7 @@ const StaffDashboard = () => {
   const endShift = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/staff/shift/end', {
+      const response = await fetch('https://restuarant-sh57.onrender.com/api/staff/shift/end', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -231,7 +231,7 @@ const StaffDashboard = () => {
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/staff/orders/${orderId}/status`, {
+      const response = await fetch(`https://restuarant-sh57.onrender.com/api/staff/orders/${orderId}/status`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -258,7 +258,7 @@ const StaffDashboard = () => {
   const updateReservationStatus = async (reservationId, newStatus) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/staff/reservations/${reservationId}/status`, {
+      const response = await fetch(`https://restuarant-sh57.onrender.com/api/staff/reservations/${reservationId}/status`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -313,7 +313,7 @@ const StaffDashboard = () => {
         await fetchActiveShift();
 
         // Then fetch other data
-        const staffResponse = await fetch('http://localhost:5000/api/staff/me', {
+        const staffResponse = await fetch('https://restuarant-sh57.onrender.com/api/staff/me', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

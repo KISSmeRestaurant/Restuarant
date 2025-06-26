@@ -39,7 +39,7 @@ const Reservations = () => {
       try {
         setError('');
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:5000/api/reservations', {
+        const response = await fetch('https://restuarant-sh57.onrender.com/api/reservations', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -117,7 +117,7 @@ const Reservations = () => {
     try {
       setError('');
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/reservations/${reservationId}/status`, {
+      const response = await fetch(`https://restuarant-sh57.onrender.com/api/reservations/${reservationId}/status`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -146,7 +146,7 @@ const Reservations = () => {
       if (!window.confirm('Are you sure you want to delete this reservation?')) return;
       
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/reservations/${reservationId}`, {
+      const response = await fetch(`https://restuarant-sh57.onrender.com/api/reservations/${reservationId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

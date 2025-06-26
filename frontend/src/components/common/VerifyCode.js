@@ -22,7 +22,7 @@ const VerifyCode = () => {
         throw new Error('Passwords do not match');
       }
 
-      const response = await fetch('http://localhost:5000/api/auth/reset-password', {
+      const response = await fetch('https://restuarant-sh57.onrender.com/api/auth/reset-password', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'

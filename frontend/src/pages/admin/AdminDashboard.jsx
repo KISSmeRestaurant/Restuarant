@@ -33,7 +33,7 @@ const fetchAdminData = async () => {
     }
 
     // Fetch admin details
-    const adminResponse = await fetch('http://localhost:5000/api/admin/me', {
+    const adminResponse = await fetch('https://restuarant-sh57.onrender.com/api/admin/me', {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -65,12 +65,12 @@ const fetchAdminData = async () => {
 
     // Fetch food items and categories in parallel
     const [foodResponse, categoriesResponse] = await Promise.all([
-      fetch('http://localhost:5000/api/foods', {
+      fetch('https://restuarant-sh57.onrender.com/api/foods', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       }),
-      fetch('http://localhost:5000/api/categories', {
+      fetch('https://restuarant-sh57.onrender.com/api/categories', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -101,7 +101,7 @@ const fetchAdminData = async () => {
   const fetchReservations = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/reservations', {
+      const response = await fetch('https://restuarant-sh57.onrender.com/api/reservations', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -140,7 +140,7 @@ const fetchAdminData = async () => {
         formData.append('image', newFood.image);
       }
 
-      const response = await fetch('http://localhost:5000/api/foods', {
+      const response = await fetch('https://restuarant-sh57.onrender.com/api/foods', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -173,7 +173,7 @@ const fetchAdminData = async () => {
   const handleDeleteFood = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/foods/${id}`, {
+      const response = await fetch(`https://restuarant-sh57.onrender.com/api/foods/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

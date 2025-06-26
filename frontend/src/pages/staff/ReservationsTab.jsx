@@ -34,7 +34,7 @@ const StaffReservations = () => {
       try {
         setError('');
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:5000/api/reservations', {
+        const response = await fetch('https://restuarant-sh57.onrender.com/api/reservations', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -112,7 +112,7 @@ const StaffReservations = () => {
     try {
       setError('');
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/staff/reservations/${reservationId}/status`, {
+      const response = await fetch(`https://restuarant-sh57.onrender.com/api/staff/reservations/${reservationId}/status`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

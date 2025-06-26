@@ -34,8 +34,8 @@ const Menu = () => {
       try {
         setLoading(true);
         const [categoriesRes, foodRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/categories'),
-          axios.get('http://localhost:5000/api/foods')
+          axios.get('https://restuarant-sh57.onrender.com/api/categories'),
+          axios.get('https://restuarant-sh57.onrender.com/api/foods')
         ]);
         setCategories(categoriesRes.data);
         setFoodItems(foodRes.data.map(item => ({
@@ -148,7 +148,7 @@ const Menu = () => {
         paymentMethod: 'cash' // Default to cash on delivery
       };
 
-      const response = await axios.post('http://localhost:5000/api/orders', orderData, {
+      const response = await axios.post('https://restuarant-sh57.onrender.com/api/orders', orderData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

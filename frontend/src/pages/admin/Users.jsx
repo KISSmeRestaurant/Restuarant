@@ -43,7 +43,7 @@ const AdminUsers = () => {
           return;
         }
 
-        const response = await fetch('http://localhost:5000/api/admin/users', {
+        const response = await fetch('https://restuarant-sh57.onrender.com/api/admin/users', {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -119,7 +119,7 @@ const AdminUsers = () => {
   const updateUserRole = async (userId, newRole) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/admin/users/${userId}/role`, {
+      const response = await fetch(`https://restuarant-sh57.onrender.com/api/admin/users/${userId}/role`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -151,7 +151,7 @@ const deleteUser = async () => {
   try {
     setIsDeleting(true);
     const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:5000/api/admin/users/${userToDelete}`, {
+    const response = await fetch(`https://restuarant-sh57.onrender.com/api/admin/users/${userToDelete}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,

@@ -36,7 +36,7 @@ const FoodManagementTab = ({
         formData.append('image', categoryImage);
       }
 
-      const response = await fetch('http://localhost:5000/api/categories', {
+      const response = await fetch('https://restuarant-sh57.onrender.com/api/categories', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -78,7 +78,7 @@ const handleUpdateCategory = async () => {
         formData.append('image', categoryImage);
       }
 
-      const response = await fetch(`http://localhost:5000/api/categories/${editingCategory._id}`, {
+      const response = await fetch(`https://restuarant-sh57.onrender.com/api/categories/${editingCategory._id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -115,7 +115,7 @@ const handleUpdateCategory = async () => {
     if (window.confirm('Are you sure you want to delete this category?')) {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
+        const response = await fetch(`https://restuarant-sh57.onrender.com/api/categories/${categoryId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,
