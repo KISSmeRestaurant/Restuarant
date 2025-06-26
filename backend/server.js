@@ -93,6 +93,10 @@ app.use('/api/reservations', reservationRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK' });
 });
+app.get('/', (req, res) => {
+  res.send('Welcome to the Kissme Restaurant API');
+});
+
 
 // Error Handling
 app.use(errorHandler);
