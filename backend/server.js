@@ -33,7 +33,7 @@ connectDB();
 // Security Middleware
 securityMiddleware(app);
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173'||'https://restuarant-frontend-kjeu.onrender.com',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
