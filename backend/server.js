@@ -30,56 +30,63 @@ const app = express();
 // Database Connection
 connectDB();
 
-// Security Middleware
-securityMiddleware(app);
+// Enhanced CORS Configuration
+const allowedOrigins = [
+  'http://localhost:5173', // Local development
+  'https://restuarant-frontend-kjeu.onrender.com' // Production frontend
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173'||'https://restuarant-frontend-kjeu.onrender.com',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+    return callback(new Error(msg), false);
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use(express.json());
+// Security Middleware
+securityMiddleware(app);
+
+// Body parsers
+app.use(express.json({ limit: '10kb' }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Serving static files
+// Static files serving
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Rate limiting
 app.use('/api/auth/login', loginLimiter);
 app.use('/api', apiLimiter);
 
-// CORS
-
-
-// Request logging
+// Request logging middleware
 app.use((req, res, next) => {
   console.log(`Incoming ${req.method} request to ${req.path}`);
-  next();
-});
-app.use(express.static('public'));
-app.use((req, res, next) => {
-  console.log(`Incoming ${req.method} request to ${req.path}`);
-  console.log('Headers:', req.headers);
-  console.log('Query:', req.query);
-  console.log('Params:', req.params);
+  console.log('Origin:', req.headers.origin);
   next();
 });
 
-app.options('*', cors()); 
+// Special handling for category uploads
 app.use((req, res, next) => {
   if (req.originalUrl === '/api/categories' && req.method === 'POST') {
-    // Skip body parsing for category uploads
     next();
   } else {
-    // Use body parsing for other routes
-    express.json({ limit: '10kb' })(req, res, next);
+    express.json()(req, res, next);
   }
 });
-// Routes
+
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
@@ -89,16 +96,36 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/reservations', reservationRoutes);
 
-// Health Check
+// Health Check Endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK' });
+  res.status(200).json({ 
+    status: 'OK',
+    timestamp: new Date(),
+    environment: process.env.NODE_ENV
+  });
 });
 
-// Error Handling
+// Root endpoint
+app.get('/', (req, res) => {
+  res.send('Welcome to KISSme Restaurant API');
+});
+
+// Handle 404 - Route not found
+app.use((req, res, next) => {
+  res.status(404).json({
+    status: 'fail',
+    message: `Can't find ${req.originalUrl} on this server!`
+  });
+});
+
+// Error Handling Middleware
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
 });
+
+export default app;
