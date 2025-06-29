@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  uild: {
+    outDir: '.dist' // Add this line
+  },
   server: {
     proxy: {
       '/api': {
