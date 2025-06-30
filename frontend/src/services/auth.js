@@ -37,3 +37,18 @@ export const fetchWithAuth = async (url, options = {}) => {
 
   return response;
 };
+// Add this to your auth service or a utility file
+export const logout = async () => {
+  try {
+    await fetch('https://restuarant-sh57.onrender.com/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include'
+    });
+  } finally {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('redirectAfterLogin');
+    window.dispatchEvent(new Event('auth-change'));
+    window.location.href = '/login'; // Full page reload to clear state
+  }
+};

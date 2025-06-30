@@ -4,20 +4,16 @@ const PrivateRoute = ({ children, adminOnly = false, staffOnly = false }) => {
   const user = JSON.parse(localStorage.getItem('user'));
   const token = localStorage.getItem('token');
 
-  console.log('PrivateRoute check:', { user, token, adminOnly, staffOnly });
-
   if (!token || !user) {
-    console.log('Redirecting to login - no token or user');
+    localStorage.setItem('redirectAfterLogin', window.location.pathname);
     return <Navigate to="/login" replace />;
   }
 
   if (adminOnly && user.role !== 'admin') {
-    console.log('Redirecting to home - not admin');
     return <Navigate to="/" replace />;
   }
 
-  if (staffOnly && (user.role !== 'staff' && user.role !== 'admin')) {
-    console.log('Redirecting to home - not staff/admin');
+  if (staffOnly && user.role !== 'staff') {
     return <Navigate to="/" replace />;
   }
 
