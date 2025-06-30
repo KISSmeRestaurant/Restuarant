@@ -3,19 +3,20 @@ import { useEffect, useState, useRef } from 'react';
 import { FaUser, FaShoppingCart, FaChevronDown } from 'react-icons/fa';
 import { MdDashboard, MdPeople, MdRestaurantMenu, MdEventNote } from 'react-icons/md';
 
-const Navbar = () => {
+const Navbar = ({ darkMode, toggleDarkMode }) => {
   const [user, setUser] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [cartItems, setCartItems] = useState([]); // Cart state
+  const [cartItems, setCartItems] = useState([]);
   const navigate = useNavigate();
   const profileRef = useRef(null);
 
   useEffect(() => {
     const checkAuth = () => {
       try {
+        const token = localStorage.getItem('token');
         const userData = localStorage.getItem('user');
-        if (userData && userData !== 'undefined') {
+        if (token && userData && userData !== 'undefined') {
           setUser(JSON.parse(userData));
         } else {
           setUser(null);
@@ -28,7 +29,19 @@ const Navbar = () => {
 
     // Initial check
     checkAuth();
-    window.addEventListener('auth-change', checkAuth);
+    
+    // Listen for auth changes from other tabs/windows
+    const handleStorageChange = (e) => {
+      if (e.key === 'token' || e.key === 'user') {
+        checkAuth();
+      }
+    };
+
+    // Custom event for auth changes within the same tab
+    const handleAuthChange = () => checkAuth();
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('auth-change', handleAuthChange);
 
     const handleClickOutside = (event) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -39,7 +52,8 @@ const Navbar = () => {
     document.addEventListener('mousedown', handleClickOutside);
 
     return () => {
-      window.removeEventListener('auth-change', checkAuth);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('auth-change', handleAuthChange);
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);

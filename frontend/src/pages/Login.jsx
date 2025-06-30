@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 
@@ -10,9 +10,15 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-   const [showPassword, setShowPassword] = useState(false);
-   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
 
+  useEffect(() => {
+    // Redirect if already logged in
+    if (localStorage.getItem('token')) {
+      navigate('/', { replace: true });
+    }
+  }, [navigate]);
 
   const { email, password } = formData;
 
@@ -52,18 +58,19 @@ const onSubmit = async e => {
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.data.user));
     
-    // Trigger auth change event
+    // Dispatch auth change event
     window.dispatchEvent(new Event('auth-change'));
     
-    // Redirect based on role
-    const role = data.data.user.role || 'user';
-    if (role === 'admin') {
-      navigate('/admin/dashboard');
-    } else if (role === 'staff') {
-      navigate('/staff/dashboard');
-    } else {
-      navigate('/dashboard');
-    }
+    // Get redirect path or use default based on role
+    const redirectPath = localStorage.getItem('redirectAfterLogin') || 
+                       (data.data.user.role === 'admin' ? '/admin/dashboard' : 
+                        data.data.user.role === 'staff' ? '/staff/dashboard' : '/');
+    
+    // Clear redirect storage
+    localStorage.removeItem('redirectAfterLogin');
+    
+    // Replace in history to prevent back navigation
+    navigate(redirectPath, { replace: true });
   } catch (err) {
     setError(err.message);
   } finally {
