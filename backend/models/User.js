@@ -39,7 +39,7 @@ const UserSchema = new mongoose.Schema({
       message: 'Passwords do not match'
     }
   },
- phone: {
+  phone: {
     type: String,
     unique: true,
     sparse: true,
@@ -50,9 +50,6 @@ const UserSchema = new mongoose.Schema({
       message: props => `${props.value} is not a valid phone number!`
     }
   },
-  passwordResetCode: String,
-  passwordResetCodeExpires: Date,
-
   role: {
     type: String,
     enum: ['user', 'admin', 'staff'],
@@ -62,17 +59,16 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  // In User model
-termsAccepted: {
-  type: Boolean,
-  required: [true, 'You must accept the terms and conditions'],
-  validate: {
-    validator: function(value) {
-      return value === true;
-    },
-    message: 'You must accept the terms and conditions'
-  }
-},
+  termsAccepted: {
+    type: Boolean,
+    required: [true, 'You must accept the terms and conditions'],
+    validate: {
+      validator: function(value) {
+        return value === true;
+      },
+      message: 'You must accept the terms and conditions'
+    }
+  },
   marketingOptIn: {
     type: Boolean,
     default: false
@@ -84,8 +80,28 @@ termsAccepted: {
   },
   accountLockedUntil: Date,
   passwordChangedAt: Date,
+  
+  // Password reset fields
   passwordResetToken: String,
   passwordResetExpires: Date,
+  passwordResetCode: String,
+  passwordResetCodeExpires: Date,
+  
+  // OTP fields
+  otp: {
+    type: String,
+    select: false
+  },
+  otpExpires: {
+    type: Date,
+    select: false
+  },
+  isOtpVerified: {
+    type: Boolean,
+    default: false,
+    select: false
+  },
+
   active: {
     type: Boolean,
     default: true,
@@ -96,8 +112,38 @@ termsAccepted: {
     default: Date.now
   }
 }, {
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
+  toJSON: { 
+    virtuals: true,
+    transform: function(doc, ret) {
+      // Remove sensitive fields when converting to JSON
+      delete ret.password;
+      delete ret.passwordConfirm;
+      delete ret.passwordResetToken;
+      delete ret.passwordResetExpires;
+      delete ret.passwordResetCode;
+      delete ret.passwordResetCodeExpires;
+      delete ret.otp;
+      delete ret.otpExpires;
+      delete ret.isOtpVerified;
+      return ret;
+    }
+  },
+  toObject: { 
+    virtuals: true,
+    transform: function(doc, ret) {
+      // Remove sensitive fields when converting to object
+      delete ret.password;
+      delete ret.passwordConfirm;
+      delete ret.passwordResetToken;
+      delete ret.passwordResetExpires;
+      delete ret.passwordResetCode;
+      delete ret.passwordResetCodeExpires;
+      delete ret.otp;
+      delete ret.otpExpires;
+      delete ret.isOtpVerified;
+      return ret;
+    }
+  }
 });
 
 // Add instance method to compare passwords
@@ -120,6 +166,23 @@ UserSchema.methods.createPasswordResetToken = function() {
   this.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
   this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
   return resetToken;
+};
+
+// Add instance method to create OTP
+UserSchema.methods.createOTP = function() {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+  this.otp = otp;
+  this.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  this.isOtpVerified = false;
+  return otp;
+};
+
+// Add instance method to verify OTP
+UserSchema.methods.verifyOTP = function(enteredOTP) {
+  return (
+    this.otp === enteredOTP &&
+    this.otpExpires > Date.now()
+  );
 };
 
 // Hash password before saving
@@ -147,5 +210,6 @@ UserSchema.pre(/^find/, function(next) {
 
 // Indexes
 UserSchema.index({ email: 1 }, { unique: true });
+UserSchema.index({ phone: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model('User', UserSchema);
