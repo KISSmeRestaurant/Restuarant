@@ -208,8 +208,4 @@ UserSchema.pre(/^find/, function(next) {
   next();
 });
 
-// Indexes
-UserSchema.index({ email: 1 }, { unique: true });
-UserSchema.index({ phone: 1 }, { unique: true, sparse: true });
-
 export default mongoose.model('User', UserSchema);
