@@ -2,14 +2,19 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import { FaUser, FaShoppingCart, FaChevronDown } from 'react-icons/fa';
 import { MdDashboard, MdPeople, MdRestaurantMenu, MdEventNote } from 'react-icons/md';
+import { useLocation } from 'react-router-dom';
 
-const Navbar = ({ darkMode, toggleDarkMode }) => {
+const Navbar = ({ darkMode, toggleDarkMode, isHomePage }) => {
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [cartItems, setCartItems] = useState([]);
   const navigate = useNavigate();
   const profileRef = useRef(null);
+
+  // Determine if we're on the home page
+  const onHomePage = isHomePage !== undefined ? isHomePage : location.pathname === '/';
 
   useEffect(() => {
     const checkAuth = () => {
@@ -92,10 +97,9 @@ const Navbar = ({ darkMode, toggleDarkMode }) => {
   };
 
   return (
-    <nav className="bg-gradient-to-r from-amber-900 to-amber-700 text-white shadow-lg sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex justify-between items-center">
-          {/* Logo */}
+    <nav className={`${onHomePage ? 'absolute top-0' : 'fixed top-0'} w-full z-50 h-16`}>
+      <div className="container mx-auto px-1 h-full pt-2">
+        <div className={`flex justify-between items-center h-full rounded-full ${onHomePage ? 'bg-gradient-to-r from-amber-900/95 to-amber-700/95' : 'bg-gradient-to-r from-amber-900 to-amber-700'} text-white shadow-lg px-6 py-3 backdrop-blur-sm`}>
           <Link to="/" className="text-2xl font-bold flex items-center">
             <span className="mr-2">🍽️</span>
             KissMe
@@ -122,15 +126,15 @@ const Navbar = ({ darkMode, toggleDarkMode }) => {
                   {isProfileOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                       {user.role === 'staff' && (
-  <Link
-    to="/staff/dashboard"
-    className="flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
-    onClick={() => setIsProfileOpen(false)}
-  >
-    <MdDashboard className="mr-2" />
-    Staff Dashboard
-  </Link>
-)}
+                        <Link
+                          to="/staff/dashboard"
+                          className="flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <MdDashboard className="mr-2" />
+                          Staff Dashboard
+                        </Link>
+                      )}
                       {user.role === 'admin' && (
                         <Link
                           to="/admin/dashboard" 
@@ -172,18 +176,16 @@ const Navbar = ({ darkMode, toggleDarkMode }) => {
                   )}
                 </div>
 
-                
-             {user?.role === 'user' && (
-  <Link to="/cart" className="relative bg-white text-amber-600 p-2 rounded-full hover:bg-amber-100 transition">
-    <FaShoppingCart />
-    {cartItems.length > 0 && (
-      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-        {cartItems.reduce((total, item) => total + item.quantity, 0)}
-      </span>
-    )}
-  </Link>
-)}
-
+                {user?.role === 'user' && (
+                  <Link to="/cart" className="relative bg-white text-amber-600 p-2 rounded-full hover:bg-amber-100 transition">
+                    <FaShoppingCart />
+                    {cartItems.length > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {cartItems.reduce((total, item) => total + item.quantity, 0)}
+                      </span>
+                    )}
+                  </Link>
+                )}
               </>
             ) : null}
 
@@ -217,24 +219,24 @@ const Navbar = ({ darkMode, toggleDarkMode }) => {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 space-y-3">
+          <div className="md:hidden mt-2 rounded-lg bg-gradient-to-b from-amber-800/95 to-amber-700/95 text-white shadow-lg px-6 py-4 backdrop-blur-sm">
             <Link 
               to="/" 
-              className="block px-3 py-2 hover:bg-teal-700 rounded transition"
+              className="block px-3 py-2 hover:bg-amber-600/50 rounded transition"
               onClick={() => setIsMenuOpen(false)}
             >
               Home
             </Link>
             <Link 
               to="/menu" 
-              className="block px-3 py-2 hover:bg-teal-700 rounded transition"
+              className="block px-3 py-2 hover:bg-amber-600/50 rounded transition"
               onClick={() => setIsMenuOpen(false)}
             >
               Menu
             </Link>
             <Link 
               to="/about" 
-              className="block px-3 py-2 hover:bg-teal-700 rounded transition"
+              className="block px-3 py-2 hover:bg-amber-600/50 rounded transition"
               onClick={() => setIsMenuOpen(false)}
             >
               About
@@ -247,62 +249,62 @@ const Navbar = ({ darkMode, toggleDarkMode }) => {
                   handleBookTableClick();
                   setIsMenuOpen(false);
                 }}
-                className="w-full px-3 py-2 bg-white text-amber-600 rounded-full text-center hover:bg-amber-100 transition"
+                className="w-full px-3 py-2 bg-white text-amber-600 rounded-full text-center hover:bg-amber-100 transition mt-2"
               >
                 Book a Table
               </button>
             )}
 
             {user && (
-  <>
-    {user.role === 'admin' ? (
-      <Link 
-        to="/admin/dashboard" 
-        className="block px-3 py-2 hover:bg-teal-700 rounded transition"
-        onClick={() => setIsMenuOpen(false)}
-      >
-        Admin Dashboard
-      </Link>
-    ) : user.role === 'staff' ? (
-      <Link 
-        to="/staff/dashboard" 
-        className="block px-3 py-2 hover:bg-teal-700 rounded transition"
-        onClick={() => setIsMenuOpen(false)}
-      >
-        <div className="flex items-center">
-          <MdDashboard className="mr-2" />
-          Staff Dashboard
-        </div>
-      </Link>
-    ) : (
-      <>
-        <Link 
-          to="/dashboard" 
-          className="block px-3 py-2 hover:bg-teal-700 rounded transition"
-          onClick={() => setIsMenuOpen(false)}
-        >
-          Dashboard
-        </Link>
-        <Link 
-          to="/my-orders" 
-          className="block px-3 py-2 hover:bg-teal-700 rounded transition"
-          onClick={() => setIsMenuOpen(false)}
-        >
-          My Orders
-        </Link>
-      </>
-    )}
-    <button 
-      onClick={() => {
-        handleLogout();
-        setIsMenuOpen(false);
-      }}
-      className="w-full text-left px-3 py-2 hover:bg-teal-700 rounded transition"
-    >
-      Logout
-    </button>
-  </>
-)}
+              <>
+                {user.role === 'admin' ? (
+                  <Link 
+                    to="/admin/dashboard" 
+                    className="block px-3 py-2 hover:bg-amber-600/50 rounded transition"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Admin Dashboard
+                  </Link>
+                ) : user.role === 'staff' ? (
+                  <Link 
+                    to="/staff/dashboard" 
+                    className="block px-3 py-2 hover:bg-amber-600/50 rounded transition"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <div className="flex items-center">
+                      <MdDashboard className="mr-2" />
+                      Staff Dashboard
+                    </div>
+                  </Link>
+                ) : (
+                  <>
+                    <Link 
+                      to="/dashboard" 
+                      className="block px-3 py-2 hover:bg-amber-600/50 rounded transition"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Dashboard
+                    </Link>
+                    <Link 
+                      to="/my-orders" 
+                      className="block px-3 py-2 hover:bg-amber-600/50 rounded transition"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      My Orders
+                    </Link>
+                  </>
+                )}
+                <button 
+                  onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-amber-600/50 rounded transition mt-2"
+                >
+                  Logout
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
