@@ -124,8 +124,6 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Try these endpoints:`);
-  console.log(`- POST /api/auth/send-otp`);
-  console.log(`- POST /api/auth/verify-otp`);
+  
 });
 export default app;
