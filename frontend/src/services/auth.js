@@ -1,6 +1,45 @@
 // services/auth.js
+
+// Check if token is expired
+export const isTokenExpired = (token) => {
+  if (!token) return true;
+  
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const currentTime = Date.now() / 1000;
+    return payload.exp < currentTime;
+  } catch (error) {
+    return true;
+  }
+};
+
+// Validate current token
+export const validateToken = async () => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) return false;
+  
+  if (isTokenExpired(token)) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.dispatchEvent(new Event('auth-change'));
+    return false;
+  }
+  
+  return true;
+};
+
 export const fetchWithAuth = async (url, options = {}) => {
   const token = localStorage.getItem('token');
+  
+  // Check if token is expired before making request
+  if (!token || isTokenExpired(token)) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.dispatchEvent(new Event('auth-change'));
+    window.location.href = '/login';
+    throw new Error('Token expired');
+  }
   
   const headers = {
     'Authorization': `Bearer ${token}`,
@@ -30,7 +69,8 @@ export const fetchWithAuth = async (url, options = {}) => {
       // If refresh fails, redirect to login
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/admin/login?session=expired';
+      window.dispatchEvent(new Event('auth-change'));
+      window.location.href = '/login';
       throw refreshError;
     }
   }

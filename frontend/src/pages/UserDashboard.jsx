@@ -8,14 +8,27 @@ import {
   MdEdit,
   MdAdminPanelSettings,
   MdOutlineReceiptLong,
-  MdOutlineFavorite
+  MdOutlineFavorite,
+  MdLocationOn,
+  MdPhone,
+  MdEmail,
+  MdCalendarToday,
+  MdTrendingUp,
+  MdStar
 } from 'react-icons/md';
 import { 
-  FaUser, 
-  FaUserShield, 
-  FaUserSlash,
   FaHistory,
-  FaCrown
+  FaCrown,
+  FaGift,
+  FaUtensils,
+  FaHeart,
+  FaClock,
+  FaMapMarkerAlt,
+  FaPhone,
+  FaEnvelope,
+  FaUser,
+  FaUserShield,
+  FaUserSlash
 } from 'react-icons/fa';
 import { IoMdNotificationsOutline } from 'react-icons/io';
 import { RiVipCrownFill } from 'react-icons/ri';

@@ -30,4 +30,19 @@ body.dark {
   color: #f9fafb;
 }
 
+/* Navbar spacing fixes */
+body.navbar-spacing {
+  padding-top: 4rem;
+}
+
+body.home {
+  padding-top: 0;
+}
+
+/* Ensure content is not hidden behind fixed navbar */
+.page-content {
+  min-height: calc(100vh - 4rem);
+  padding-top: 1rem;
+}
+
 /* Add any other global styles here */

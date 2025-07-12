@@ -20,6 +20,7 @@ import StaffDashboard from './pages/staff/StaffDashboard';
 import Cart from './components/common/Cart';
 import OrderDetail from './pages/users/OrderDetail';  
 import UserOrders from './pages/users/UserOrders';  
+import { validateToken } from './services/auth';
 import './styles/global.css';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -35,6 +36,8 @@ const AppContent = () => {
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem('darkMode') === 'true';
   });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const location = useLocation();
 
   useEffect(() => {
@@ -44,6 +47,15 @@ const AppContent = () => {
     } else {
       document.body.classList.remove('dark');
       localStorage.setItem('darkMode', 'false');
+    }
+
+    // Add navbar spacing class for non-home pages
+    if (location.pathname === '/') {
+      document.body.classList.remove('navbar-spacing');
+      document.body.classList.add('home');
+    } else {
+      document.body.classList.add('navbar-spacing');
+      document.body.classList.remove('home');
     }
 
     const handleStorageChange = (e) => {
@@ -59,18 +71,53 @@ const AppContent = () => {
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [darkMode]);
+  }, [darkMode, location.pathname]);
+
+  useEffect(() => {
+    const checkAuthentication = async () => {
+      setIsCheckingAuth(true);
+      try {
+        const isValid = await validateToken();
+        setIsAuthenticated(isValid);
+      } catch (error) {
+        console.error('Auth check error:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    checkAuthentication();
+
+    // Listen for auth changes
+    const handleAuthChange = () => {
+      checkAuthentication();
+    };
+
+    window.addEventListener('auth-change', handleAuthChange);
+    window.addEventListener('storage', handleAuthChange);
+
+    return () => {
+      window.removeEventListener('auth-change', handleAuthChange);
+      window.removeEventListener('storage', handleAuthChange);
+    };
+  }, []);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
 
-  const isAuthenticated = () => {
-    return !!localStorage.getItem('token');
-  };
+  // Show loading spinner while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-amber-500"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'} ${location.pathname !== '/' ? 'pt-16' : ''}`}>
+    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <Navbar 
         darkMode={darkMode} 
         toggleDarkMode={toggleDarkMode}
@@ -81,7 +128,7 @@ const AppContent = () => {
         <Route 
           path="/login" 
           element={
-            isAuthenticated() ? 
+            isAuthenticated ? 
               <Navigate to="/" replace /> : 
               <Login darkMode={darkMode} />
           } 
@@ -89,7 +136,7 @@ const AppContent = () => {
         <Route 
           path="/signup" 
           element={
-            isAuthenticated() ? 
+            isAuthenticated ? 
               <Navigate to="/dashboard" replace /> : 
               <Signup darkMode={darkMode} />
           } 

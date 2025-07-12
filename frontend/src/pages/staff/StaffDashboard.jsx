@@ -11,6 +11,7 @@ import {
   FaClock
 } from 'react-icons/fa';
 import { MdKitchen, MdRateReview } from 'react-icons/md';
+import { fetchWithAuth } from '../../services/auth';
 
 // Import components
 import Header from './Header';
@@ -78,12 +79,7 @@ const StaffDashboard = () => {
   // Data fetching functions
   const fetchActiveShift = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://restuarant-sh57.onrender.com/api/staff/shift/active', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const response = await fetchWithAuth('https://restuarant-sh57.onrender.com/api/staff/shift/active');
 
       if (response.ok) {
         const data = await response.json();
@@ -110,24 +106,16 @@ const StaffDashboard = () => {
     }
   };
 
-  const fetchOrders = async (token) => {
-    const response = await fetch('https://restuarant-sh57.onrender.com/api/staff/orders', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+  const fetchOrders = async () => {
+    const response = await fetchWithAuth('https://restuarant-sh57.onrender.com/api/staff/orders');
     const data = await response.json();
     setOrders(data.data);
     checkForNewOrders(data.data);
   };
 
-  const fetchReservations = async (token) => {
+  const fetchReservations = async () => {
     try {
-      const response = await fetch('https://restuarant-sh57.onrender.com/api/staff/reservations', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const response = await fetchWithAuth('https://restuarant-sh57.onrender.com/api/staff/reservations');
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -144,12 +132,8 @@ const StaffDashboard = () => {
     }
   };
 
-  const fetchCustomerFeedback = async (token) => {
-    const response = await fetch('https://restuarant-sh57.onrender.com/api/staff/feedback', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+  const fetchCustomerFeedback = async () => {
+    const response = await fetchWithAuth('https://restuarant-sh57.onrender.com/api/staff/feedback');
     const data = await response.json();
     setCustomerFeedback(data.data);
   };
@@ -333,9 +317,9 @@ const StaffDashboard = () => {
         setStaffDetails(staffData.data);
 
         await Promise.all([
-          fetchOrders(token),
-          fetchReservations(token),
-          fetchCustomerFeedback(token)
+          fetchOrders(),
+          fetchReservations(),
+          fetchCustomerFeedback()
         ]);
       } catch (err) {
         console.error('Error in fetchData:', err);

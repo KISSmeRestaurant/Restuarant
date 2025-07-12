@@ -26,7 +26,7 @@ const Menu = () => {
     deliveryOption: 'delivery' // Added delivery option
   });
 
-  const isLoggedIn = !!localStorage.getItem('token');
+  const isLoggedIn= !!localStorage.getItem('token');
 
   // Fetch menu data
   useEffect(() => {
