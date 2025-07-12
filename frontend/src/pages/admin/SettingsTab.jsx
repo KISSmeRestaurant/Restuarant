@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { FaCog, FaBell, FaLock, FaInfoCircle, FaBusinessTime } from 'react-icons/fa';
-import { MdEmail, MdPayment, MdReceipt, MdPeople } from 'react-icons/md';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaCog, FaBell, FaLock, FaInfoCircle, FaBusinessTime, FaSave, FaCheck } from 'react-icons/fa';
+import { MdEmail, MdPayment, MdReceipt, MdNotifications, MdSecurity } from 'react-icons/md';
 
 const SettingsTab = () => {
   const [activeSetting, setActiveSetting] = useState('general');
+  const [saveStatus, setSaveStatus] = useState('');
   const [formData, setFormData] = useState({
-    restaurantName: 'Gourmet Delight',
-    contactEmail: 'contact@gourmetdelight.com',
+    restaurantName: 'KissMe Restaurant',
+    contactEmail: 'contact@kissme.com',
     phoneNumber: '+1 (555) 123-4567',
     address: '123 Food Street, Culinary City',
+    description: 'A modern Italian restaurant with a focus on premium food tastes',
     openingHours: {
       monday: { open: '09:00', close: '22:00' },
       tuesday: { open: '09:00', close: '22:00' },
@@ -25,7 +28,9 @@ const SettingsTab = () => {
       email: true,
       sms: false,
       push: true
-    }
+    },
+    termsConditions: '',
+    privacyPolicy: ''
   });
 
   const handleInputChange = (e) => {
@@ -98,13 +103,6 @@ const SettingsTab = () => {
             >
               <FaLock className="mr-3" />
               Security
-            </button>
-            <button
-              onClick={() => setActiveSetting('staff')}
-              className={`flex items-center w-full px-4 py-2 text-left rounded-md ${activeSetting === 'staff' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'}`}
-            >
-              <MdPeople className="mr-3" />
-              Staff Management
             </button>
             <button
               onClick={() => setActiveSetting('about')}
@@ -350,48 +348,6 @@ const SettingsTab = () => {
               </div>
             )}
 
-            {activeSetting === 'staff' && (
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-6">Staff Management</h3>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      <tr>
-                        <td className="px-6 py-4 whitespace-nowrap">John Doe</td>
-                        <td className="px-6 py-4 whitespace-nowrap">john@example.com</td>
-                        <td className="px-6 py-4 whitespace-nowrap">Manager</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <button className="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
-                          <button className="text-red-600 hover:text-red-900">Remove</button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="px-6 py-4 whitespace-nowrap">Jane Smith</td>
-                        <td className="px-6 py-4 whitespace-nowrap">jane@example.com</td>
-                        <td className="px-6 py-4 whitespace-nowrap">Staff</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <button className="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
-                          <button className="text-red-600 hover:text-red-900">Remove</button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div className="mt-6">
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
-                    Add New Staff Member
-                  </button>
-                </div>
-              </div>
-            )}
 
             {activeSetting === 'about' && (
               <div>

@@ -1,8 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
-import { FaUser, FaShoppingCart, FaChevronDown } from 'react-icons/fa';
-import { MdDashboard, MdPeople, MdRestaurantMenu, MdEventNote } from 'react-icons/md';
+import { FaUser, FaShoppingCart, FaChevronDown, FaMoon, FaSun, FaSearch } from 'react-icons/fa';
+import { MdDashboard, MdRestaurantMenu } from 'react-icons/md';
 import { useLocation } from 'react-router-dom';
+import { validateToken } from '../../services/auth';
 
 const Navbar = ({ darkMode, toggleDarkMode, isHomePage }) => {
   const location = useLocation();
@@ -17,18 +18,27 @@ const Navbar = ({ darkMode, toggleDarkMode, isHomePage }) => {
   const onHomePage = isHomePage !== undefined ? isHomePage : location.pathname === '/';
 
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       try {
         const token = localStorage.getItem('token');
         const userData = localStorage.getItem('user');
+        
         if (token && userData && userData !== 'undefined') {
-          setUser(JSON.parse(userData));
+          // Validate token before setting user
+          const isValid = await validateToken();
+          if (isValid) {
+            setUser(JSON.parse(userData));
+          } else {
+            setUser(null);
+          }
         } else {
           setUser(null);
         }
       } catch (error) {
         console.error('Failed to parse user data:', error);
         setUser(null);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       }
     };
 
@@ -111,84 +121,6 @@ const Navbar = ({ darkMode, toggleDarkMode, isHomePage }) => {
             <Link to="/menu" className="hover:text-amber-200 transition">Menu</Link>
             <Link to="/about" className="hover:text-amber-200 transition">About</Link>
             
-            {user ? (
-              <>
-                <div className="relative" ref={profileRef}>
-                  <button
-                    onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    className="flex items-center space-x-1 hover:text-amber-200 transition"
-                  >
-                    <FaUser className="mr-1" />
-                    <span>{user.firstName || 'Profile'}</span>
-                    <FaChevronDown className={`transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {isProfileOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-                      {user.role === 'staff' && (
-                        <Link
-                          to="/staff/dashboard"
-                          className="flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          <MdDashboard className="mr-2" />
-                          Staff Dashboard
-                        </Link>
-                      )}
-                      {user.role === 'admin' && (
-                        <Link
-                          to="/admin/dashboard" 
-                          className="flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          <MdDashboard className="mr-2" />
-                          Admin Dashboard
-                        </Link>
-                      )}
-                      {user.role === 'user' && (
-                        <>
-                          <Link
-                            to="/dashboard"
-                            className="flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
-                            onClick={() => setIsProfileOpen(false)}
-                          >
-                            <MdDashboard className="mr-2" />
-                            Dashboard
-                          </Link>
-                          
-                          <Link
-                            to="/my-orders"
-                            className="flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
-                            onClick={() => setIsProfileOpen(false)}
-                          >
-                            <MdRestaurantMenu className="mr-2" />
-                            My Orders
-                          </Link>
-                        </>
-                      )}
-                      <button
-                        onClick={handleLogout}
-                        className="w-full text-left flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
-                      >
-                        Logout
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {user?.role === 'user' && (
-                  <Link to="/cart" className="relative bg-white text-amber-600 p-2 rounded-full hover:bg-amber-100 transition">
-                    <FaShoppingCart />
-                    {cartItems.length > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {cartItems.reduce((total, item) => total + item.quantity, 0)}
-                      </span>
-                    )}
-                  </Link>
-                )}
-              </>
-            ) : null}
-
             {/* Book a Table button - shown for non-logged in users and regular users */}
             {(user?.role === 'user' || !user) && (
               <button 
@@ -197,6 +129,82 @@ const Navbar = ({ darkMode, toggleDarkMode, isHomePage }) => {
               >
                 Book a Table
               </button>
+            )}
+
+            {user?.role === 'user' && (
+              <Link to="/cart" className="relative bg-white text-amber-600 p-2 rounded-full hover:bg-amber-100 transition">
+                <FaShoppingCart />
+                {cartItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartItems.reduce((total, item) => total + item.quantity, 0)}
+                  </span>
+                )}
+              </Link>
+            )}
+            
+            {user && (
+              <div className="relative" ref={profileRef}>
+                <button
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center space-x-1 hover:text-amber-200 transition"
+                >
+                  <FaUser className="mr-1" />
+                  <span>{user.firstName || 'Profile'}</span>
+                  <FaChevronDown className={`transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isProfileOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                    {user.role === 'staff' && (
+                      <Link
+                        to="/staff/dashboard"
+                        className="flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <MdDashboard className="mr-2" />
+                        Staff Dashboard
+                      </Link>
+                    )}
+                    {user.role === 'admin' && (
+                      <Link
+                        to="/admin/dashboard" 
+                        className="flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <MdDashboard className="mr-2" />
+                        Admin Dashboard
+                      </Link>
+                    )}
+                    {user.role === 'user' && (
+                      <>
+                        <Link
+                          to="/dashboard"
+                          className="flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <MdDashboard className="mr-2" />
+                          Dashboard
+                        </Link>
+                        
+                        <Link
+                          to="/my-orders"
+                          className="flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <MdRestaurantMenu className="mr-2" />
+                          My Orders
+                        </Link>
+                      </>
+                    )}
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 

@@ -100,7 +100,7 @@ app.get('/api/health', (req, res) => {
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.send('Welcome to KISSme Restaurant API');
+  res.send('Welcome to KISSme Restaurant ');
 });
 
 // 404 Handler - MUST come after all routes
