@@ -71,14 +71,14 @@ const Home = () => {
   }, []);
 
   const galleryImages = [
-    '/public/gallery/food1.jpg',
-    '/public/gallery/food2.jpg',
-    '/public/gallery/food3.jpg',
-    '/public/gallery/food4.jpg',
-    '/public/gallery/food5.jpg',
-    '/public/gallery/food6.jpg',
-    '/public/gallery/food7.jpg',
-    '/public/gallery/food8.jpg',
+    '/gallery/food1.jpg',
+    '/gallery/food2.jpg',
+    '/gallery/food3.jpg',
+    '/gallery/food4.jpg',
+    '/gallery/food5.jpg',
+    '/gallery/food6.jpg',
+    '/gallery/food7.jpg',
+    '/gallery/food8.jpg',
   ];
 
   const handleBookingChange = (e) => {
