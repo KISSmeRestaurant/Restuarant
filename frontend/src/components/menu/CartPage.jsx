@@ -125,7 +125,7 @@ const CartPage = ({
                   </div>
                   
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Tax (10%):</span>
+                    <span className="text-gray-600">VAT (20%):</span>
                     <span className="font-medium">${tax.toFixed(2)}</span>
                   </div>
                   

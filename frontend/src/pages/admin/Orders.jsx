@@ -11,7 +11,11 @@ import {
   FaPrint,
   FaFileExport,
   FaCalendarAlt,
-  FaUser
+  FaUser,
+  FaDollarSign,
+  FaShoppingCart,
+  FaChartLine,
+  FaPercentage
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import DatePicker from 'react-datepicker';
@@ -26,6 +30,12 @@ const AdminOrders = ({ darkMode }) => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState(null);
   const [expandedOrder, setExpandedOrder] = useState(null);
+  const [orderStats, setOrderStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsDateRange, setStatsDateRange] = useState({
+    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+    endDate: new Date()
+  });
   const navigate = useNavigate();
 
   // Fetch orders data
@@ -57,6 +67,151 @@ const AdminOrders = ({ darkMode }) => {
 
     fetchOrders();
   }, []);
+
+  // Calculate order statistics from orders data (fallback for production)
+  useEffect(() => {
+    const calculateOrderStats = () => {
+      if (!orders || orders.length === 0) {
+        setOrderStats({
+          summary: {
+            totalOrders: 0,
+            totalRevenue: 0,
+            deliveredRevenue: 0,
+            pendingRevenue: 0,
+            averageOrderValue: 0,
+            deliveryRate: 0,
+            cancellationRate: 0
+          },
+          breakdown: {
+            delivered: { count: 0, revenue: 0 },
+            pending: { count: 0, revenue: 0 },
+            cancelled: { count: 0, revenue: 0 }
+          }
+        });
+        setStatsLoading(false);
+        return;
+      }
+
+      // Filter orders by date range
+      const filteredOrders = orders.filter(order => {
+        const orderDate = new Date(order.createdAt);
+        return orderDate >= statsDateRange.startDate && orderDate <= statsDateRange.endDate;
+      });
+
+      let totalRevenue = 0;
+      let deliveredRevenue = 0;
+      let pendingRevenue = 0;
+      let cancelledRevenue = 0;
+      let deliveredCount = 0;
+      let pendingCount = 0;
+      let cancelledCount = 0;
+
+      filteredOrders.forEach(order => {
+        const amount = order.totalAmount || 0;
+        totalRevenue += amount;
+
+        if (order.status === 'delivered') {
+          deliveredRevenue += amount;
+          deliveredCount += 1;
+        } else if (['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery'].includes(order.status)) {
+          pendingRevenue += amount;
+          pendingCount += 1;
+        } else if (order.status === 'cancelled') {
+          cancelledRevenue += amount;
+          cancelledCount += 1;
+        }
+      });
+
+      const totalOrders = filteredOrders.length;
+      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+      const deliveryRate = totalOrders > 0 ? (deliveredCount / totalOrders) * 100 : 0;
+      const cancellationRate = totalOrders > 0 ? (cancelledCount / totalOrders) * 100 : 0;
+
+      setOrderStats({
+        summary: {
+          totalOrders,
+          totalRevenue: Math.round(totalRevenue * 100) / 100,
+          deliveredRevenue: Math.round(deliveredRevenue * 100) / 100,
+          pendingRevenue: Math.round(pendingRevenue * 100) / 100,
+          averageOrderValue: Math.round(averageOrderValue * 100) / 100,
+          deliveryRate: Math.round(deliveryRate * 100) / 100,
+          cancellationRate: Math.round(cancellationRate * 100) / 100
+        },
+        breakdown: {
+          delivered: {
+            count: deliveredCount,
+            revenue: Math.round(deliveredRevenue * 100) / 100
+          },
+          pending: {
+            count: pendingCount,
+            revenue: Math.round(pendingRevenue * 100) / 100
+          },
+          cancelled: {
+            count: cancelledCount,
+            revenue: Math.round(cancelledRevenue * 100) / 100
+          }
+        }
+      });
+      setStatsLoading(false);
+    };
+
+    setStatsLoading(true);
+    calculateOrderStats();
+  }, [orders, statsDateRange]);
+
+  // Calculate daily revenue from orders
+  const getDailyRevenue = () => {
+    if (!orders || orders.length === 0) return [];
+
+    const dailyData = {};
+    
+    orders.forEach(order => {
+      const orderDate = new Date(order.createdAt);
+      const dateKey = orderDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+      const dateDisplay = orderDate.toLocaleDateString('en-US', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+      
+      if (!dailyData[dateKey]) {
+        dailyData[dateKey] = {
+          date: dateDisplay,
+          totalRevenue: 0,
+          deliveredRevenue: 0,
+          pendingRevenue: 0,
+          cancelledRevenue: 0,
+          totalOrders: 0,
+          deliveredOrders: 0,
+          pendingOrders: 0,
+          cancelledOrders: 0
+        };
+      }
+      
+      const orderAmount = order.totalAmount || 0;
+      dailyData[dateKey].totalRevenue += orderAmount;
+      dailyData[dateKey].totalOrders += 1;
+      
+      if (order.status === 'delivered') {
+        dailyData[dateKey].deliveredRevenue += orderAmount;
+        dailyData[dateKey].deliveredOrders += 1;
+      } else if (['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery'].includes(order.status)) {
+        dailyData[dateKey].pendingRevenue += orderAmount;
+        dailyData[dateKey].pendingOrders += 1;
+      } else if (order.status === 'cancelled') {
+        dailyData[dateKey].cancelledRevenue += orderAmount;
+        dailyData[dateKey].cancelledOrders += 1;
+      }
+    });
+    
+    // Convert to array and sort by date (newest first)
+    return Object.keys(dailyData)
+      .sort((a, b) => new Date(b) - new Date(a))
+      .map(key => ({ dateKey: key, ...dailyData[key] }));
+  };
+
+  const dailyRevenue = getDailyRevenue();
 
   // Apply filters
   useEffect(() => {
@@ -192,9 +347,44 @@ const AdminOrders = ({ darkMode }) => {
     printWindow.focus();
     setTimeout(() => {
       printWindow.print();
-      printWindow.close();
-    }, 500);
+    printWindow.close();
+  }, 500);
+};
+
+  // Update stats date range
+  const updateStatsDateRange = (startDate, endDate) => {
+    setStatsDateRange({ startDate, endDate });
   };
+
+  // Statistics Card Component
+  const StatCard = ({ title, value, icon: Icon, color, subtitle, loading }) => (
+    <div className={`p-6 rounded-xl shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            {title}
+          </p>
+          {loading ? (
+            <div className="animate-pulse">
+              <div className={`h-8 w-24 rounded mt-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></div>
+            </div>
+          ) : (
+            <p className={`text-2xl font-bold mt-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              {value}
+            </p>
+          )}
+          {subtitle && (
+            <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+              {subtitle}
+            </p>
+          )}
+        </div>
+        <div className={`p-3 rounded-full ${color}`}>
+          <Icon className="w-6 h-6 text-white" />
+        </div>
+      </div>
+    </div>
+  );
 
   // Export orders to CSV
   const exportToCSV = () => {
@@ -248,27 +438,224 @@ const AdminOrders = ({ darkMode }) => {
   }
 
   return (
-    <div className={`rounded-xl shadow-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-      <div className={`p-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <h2 className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            Order Management
-            <span className="ml-2 text-sm font-normal text-gray-500">
-              ({filteredOrders.length} orders)
-            </span>
-          </h2>
-          <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={exportToCSV}
-              className={`flex items-center px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}
-            >
-              <FaFileExport className="mr-2" />
-              Export CSV
-            </button>
+    <div className="space-y-6">
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          title="Total Revenue"
+          value={orderStats ? `$${orderStats.summary.totalRevenue.toFixed(2)}` : '$0.00'}
+          icon={FaDollarSign}
+          color="bg-green-500"
+          subtitle={orderStats ? `Last ${Math.ceil((statsDateRange.endDate - statsDateRange.startDate) / (1000 * 60 * 60 * 24))} days` : ''}
+          loading={statsLoading}
+        />
+        <StatCard
+          title="Delivered Revenue"
+          value={orderStats ? `$${orderStats.summary.deliveredRevenue.toFixed(2)}` : '$0.00'}
+          icon={FaCheckCircle}
+          color="bg-blue-500"
+          subtitle={orderStats ? `${orderStats.breakdown.delivered.count} orders delivered` : ''}
+          loading={statsLoading}
+        />
+        <StatCard
+          title="Total Orders"
+          value={orderStats ? orderStats.summary.totalOrders.toString() : '0'}
+          icon={FaShoppingCart}
+          color="bg-purple-500"
+          subtitle={orderStats ? `Avg: $${orderStats.summary.averageOrderValue.toFixed(2)} per order` : ''}
+          loading={statsLoading}
+        />
+        <StatCard
+          title="Delivery Rate"
+          value={orderStats ? `${orderStats.summary.deliveryRate.toFixed(1)}%` : '0%'}
+          icon={FaChartLine}
+          color="bg-orange-500"
+          subtitle={orderStats ? `${orderStats.summary.cancellationRate.toFixed(1)}% cancelled` : ''}
+          loading={statsLoading}
+        />
+      </div>
+
+      {/* Revenue Breakdown */}
+      {orderStats && (
+        <div className={`p-6 rounded-xl shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            Revenue Breakdown
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Delivered Orders</p>
+                  <p className={`text-xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                    ${orderStats.breakdown.delivered.revenue.toFixed(2)}
+                  </p>
+                  <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                    {orderStats.breakdown.delivered.count} orders
+                  </p>
+                </div>
+                <FaCheckCircle className="text-green-500 w-8 h-8" />
+              </div>
+            </div>
+            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Pending Orders</p>
+                  <p className={`text-xl font-bold ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                    ${orderStats.breakdown.pending.revenue.toFixed(2)}
+                  </p>
+                  <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                    {orderStats.breakdown.pending.count} orders
+                  </p>
+                </div>
+                <FaClock className="text-yellow-500 w-8 h-8" />
+              </div>
+            </div>
+            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Cancelled Orders</p>
+                  <p className={`text-xl font-bold ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
+                    ${orderStats.breakdown.cancelled.revenue.toFixed(2)}
+                  </p>
+                  <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                    {orderStats.breakdown.cancelled.count} orders
+                  </p>
+                </div>
+                <FaTimesCircle className="text-red-500 w-8 h-8" />
+              </div>
+            </div>
           </div>
         </div>
+      )}
 
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Daily Revenue Table */}
+      {dailyRevenue.length > 0 && (
+        <div className={`p-6 rounded-xl shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            Daily Revenue Breakdown
+            <span className="ml-2 text-sm font-normal text-gray-500">
+              (Last {dailyRevenue.length} days)
+            </span>
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className={darkMode ? 'bg-gray-700' : 'bg-gray-50'}>
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                    <span className={darkMode ? 'text-gray-300' : 'text-gray-500'}>Date</span>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                    <span className={darkMode ? 'text-gray-300' : 'text-gray-500'}>Total Revenue</span>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                    <span className={darkMode ? 'text-gray-300' : 'text-gray-500'}>Delivered</span>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                    <span className={darkMode ? 'text-gray-300' : 'text-gray-500'}>Pending</span>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                    <span className={darkMode ? 'text-gray-300' : 'text-gray-500'}>Orders</span>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                    <span className={darkMode ? 'text-gray-300' : 'text-gray-500'}>Avg Order</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y ${darkMode ? 'divide-gray-700 bg-gray-800' : 'divide-gray-200 bg-white'}`}>
+                {dailyRevenue.map((day, index) => (
+                  <tr key={day.dateKey} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {day.date}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={`text-sm font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                        ${day.totalRevenue.toFixed(2)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={`text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                        ${day.deliveredRevenue.toFixed(2)}
+                      </div>
+                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {day.deliveredOrders} orders
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={`text-sm ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                        ${day.pendingRevenue.toFixed(2)}
+                      </div>
+                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {day.pendingOrders} orders
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        {day.totalOrders}
+                      </div>
+                      {day.cancelledOrders > 0 && (
+                        <div className={`text-xs ${darkMode ? 'text-red-400' : 'text-red-500'}`}>
+                          {day.cancelledOrders} cancelled
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        ${day.totalOrders > 0 ? (day.totalRevenue / day.totalOrders).toFixed(2) : '0.00'}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {dailyRevenue.length > 10 && (
+            <div className={`mt-4 text-center text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              Showing recent {dailyRevenue.length} days of revenue data
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Orders Table */}
+      <div className={`rounded-xl shadow-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+        <div className={`p-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <h2 className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              Order Management
+              <span className="ml-2 text-sm font-normal text-gray-500">
+                ({filteredOrders.length} orders)
+              </span>
+            </h2>
+            <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
+              <div className="flex gap-2">
+                <DatePicker
+                  selected={statsDateRange.startDate}
+                  onChange={(date) => updateStatsDateRange(date, statsDateRange.endDate)}
+                  placeholderText="Start date"
+                  className={`px-3 py-2 text-sm rounded-lg ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`}
+                  dateFormat="MMM d, yyyy"
+                />
+                <DatePicker
+                  selected={statsDateRange.endDate}
+                  onChange={(date) => updateStatsDateRange(statsDateRange.startDate, date)}
+                  placeholderText="End date"
+                  className={`px-3 py-2 text-sm rounded-lg ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`}
+                  dateFormat="MMM d, yyyy"
+                />
+              </div>
+              <button
+                onClick={exportToCSV}
+                className={`flex items-center px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}
+              >
+                <FaFileExport className="mr-2" />
+                Export CSV
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <FaSearch className={darkMode ? 'text-gray-400' : 'text-gray-500'} />
@@ -522,6 +909,7 @@ const AdminOrders = ({ darkMode }) => {
             )}
           </tbody>
         </table>
+      </div>
       </div>
     </div>
   );

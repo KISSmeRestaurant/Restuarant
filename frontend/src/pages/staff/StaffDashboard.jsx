@@ -6,8 +6,6 @@ import {
   FaUser,
   FaBell,
   FaSearch,
-  FaMoon,
-  FaSun,
   FaClock
 } from 'react-icons/fa';
 import { MdKitchen, MdRateReview } from 'react-icons/md';
@@ -32,7 +30,6 @@ const StaffDashboard = () => {
   const [shiftStatus, setShiftStatus] = useState('notStarted');
   const [shiftStartTime, setShiftStartTime] = useState(null);
   const [shiftDuration, setShiftDuration] = useState('00:00:00');
-  const [darkMode, setDarkMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [notifications, setNotifications] = useState([]);
   const navigate = useNavigate();
@@ -361,7 +358,7 @@ const StaffDashboard = () => {
 
   if (loading) {
     return (
-      <div className={`flex justify-center items-center h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <div className="flex justify-center items-center h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
@@ -369,7 +366,7 @@ const StaffDashboard = () => {
 
   if (error) {
     return (
-      <div className={`min-h-screen p-4 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50'}`}>
+      <div className="min-h-screen p-4 bg-gray-50">
         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
           <p className="text-lg">{error}</p>
         </div>
@@ -378,7 +375,7 @@ const StaffDashboard = () => {
   }
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50'}`}>
+    <div className="min-h-screen bg-gray-50">
       <Header 
         staffDetails={staffDetails} 
         shiftStatus={shiftStatus} 
@@ -386,23 +383,21 @@ const StaffDashboard = () => {
         endShift={endShift}
         shiftDuration={shiftDuration}
         shiftStartTime={shiftStartTime}
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
         notifications={notifications}
         markNotificationAsRead={markNotificationAsRead}
       />
 
       {/* Search Bar */}
-      <div className={`sticky top-0 z-10 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md p-4`}>
+      <div className="sticky top-0 z-10 bg-white shadow-md p-4">
         <div className="max-w-7xl mx-auto flex items-center">
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FaSearch className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+              <FaSearch className="text-gray-500" />
             </div>
             <input
               type="text"
               placeholder="Search orders, reservations, feedback..."
-              className={`block w-full pl-10 pr-3 py-3 rounded-lg ${darkMode ? 'bg-gray-700 text-white placeholder-gray-400' : 'bg-gray-100 text-gray-900 placeholder-gray-500'} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              className="block w-full pl-10 pr-3 py-3 rounded-lg bg-gray-100 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -411,14 +406,14 @@ const StaffDashboard = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className={`sticky top-16 z-10 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow`}>
+      <div className="sticky top-16 z-10 bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex overflow-x-auto">
             <button
               onClick={() => setActiveTab('orders')}
               className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'orders' ? 
-                `${darkMode ? 'border-b-2 border-blue-400 text-blue-400' : 'border-b-2 border-blue-500 text-blue-600'}` : 
-                `${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}`}
+                'border-b-2 border-blue-500 text-blue-600' : 
+                'text-gray-500 hover:text-gray-700'}`}
             >
               <div className="flex items-center">
                 <FaUtensils className="mr-2 text-lg" /> Orders
@@ -433,8 +428,8 @@ const StaffDashboard = () => {
             <button
               onClick={() => setActiveTab('reservations')}
               className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'reservations' ? 
-                `${darkMode ? 'border-b-2 border-green-400 text-green-400' : 'border-b-2 border-green-500 text-green-600'}` : 
-                `${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}`}
+                'border-b-2 border-green-500 text-green-600' : 
+                'text-gray-500 hover:text-gray-700'}`}
             >
               <div className="flex items-center">
                 <FaTable className="mr-2 text-lg" /> Reservations
@@ -449,8 +444,8 @@ const StaffDashboard = () => {
             <button
               onClick={() => setActiveTab('kitchen')}
               className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'kitchen' ? 
-                `${darkMode ? 'border-b-2 border-yellow-400 text-yellow-400' : 'border-b-2 border-yellow-500 text-yellow-600'}` : 
-                `${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}`}
+                'border-b-2 border-yellow-500 text-yellow-600' : 
+                'text-gray-500 hover:text-gray-700'}`}
             >
               <div className="flex items-center">
                 <MdKitchen className="mr-2 text-lg" /> Kitchen
@@ -460,8 +455,8 @@ const StaffDashboard = () => {
             <button
               onClick={() => setActiveTab('feedback')}
               className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'feedback' ? 
-                `${darkMode ? 'border-b-2 border-purple-400 text-purple-400' : 'border-b-2 border-purple-500 text-purple-600'}` : 
-                `${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}`}
+                'border-b-2 border-purple-500 text-purple-600' : 
+                'text-gray-500 hover:text-gray-700'}`}
             >
               <div className="flex items-center">
                 <MdRateReview className="mr-2 text-lg" /> Feedback
@@ -481,14 +476,12 @@ const StaffDashboard = () => {
           orders={orders} 
           reservations={reservations} 
           customerFeedback={customerFeedback}
-          darkMode={darkMode}
         />
 
         {activeTab === 'orders' && (
           <OrdersTab 
             orders={filteredOrders} 
             updateOrderStatus={updateOrderStatus} 
-            darkMode={darkMode}
           />
         )}
 
@@ -496,7 +489,6 @@ const StaffDashboard = () => {
           <ReservationsTab 
             reservations={filteredReservations} 
             updateReservationStatus={updateReservationStatus}
-            darkMode={darkMode}
             isLoading={loading}
           />
         )}
@@ -505,14 +497,12 @@ const StaffDashboard = () => {
           <KitchenTab 
             orders={filteredOrders} 
             updateOrderStatus={updateOrderStatus}
-            darkMode={darkMode}
           />
         )}
 
         {activeTab === 'feedback' && (
           <FeedbackTab 
             customerFeedback={filteredFeedback}
-            darkMode={darkMode}
           />
         )}
       </main>

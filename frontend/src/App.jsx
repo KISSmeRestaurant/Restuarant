@@ -20,35 +20,28 @@ import StaffDashboard from './pages/staff/StaffDashboard';
 import Cart from './components/common/Cart';
 import OrderDetail from './pages/users/OrderDetail';  
 import UserOrders from './pages/users/UserOrders';  
+import UserFeedback from './pages/users/UserFeedback';
 import { validateToken } from './services/auth';
+import { SettingsProvider } from './contexts/SettingsContext';
 import './styles/global.css';
 import 'react-toastify/dist/ReactToastify.css';
 
 const App = () => {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <SettingsProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </SettingsProvider>
   );
 };
 
 const AppContent = () => {
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('darkMode') === 'true';
-  });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const location = useLocation();
 
   useEffect(() => {
-    if (darkMode) {
-      document.body.classList.add('dark');
-      localStorage.setItem('darkMode', 'true');
-    } else {
-      document.body.classList.remove('dark');
-      localStorage.setItem('darkMode', 'false');
-    }
-
     // Add navbar spacing class for non-home pages
     if (location.pathname === '/') {
       document.body.classList.remove('navbar-spacing');
@@ -71,7 +64,7 @@ const AppContent = () => {
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [darkMode, location.pathname]);
+  }, [location.pathname]);
 
   useEffect(() => {
     const checkAuthentication = async () => {
@@ -103,34 +96,28 @@ const AppContent = () => {
     };
   }, []);
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-  };
-
   // Show loading spinner while checking authentication
   if (isCheckingAuth) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-amber-500"></div>
       </div>
     );
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div className="min-h-screen transition-colors duration-300 bg-gray-50">
       <Navbar 
-        darkMode={darkMode} 
-        toggleDarkMode={toggleDarkMode}
         isHomePage={location.pathname === '/'}
       />
       <Routes>
-        <Route path="/" element={<Home darkMode={darkMode} />} />
+        <Route path="/" element={<Home />} />
         <Route 
           path="/login" 
           element={
             isAuthenticated ? 
               <Navigate to="/" replace /> : 
-              <Login darkMode={darkMode} />
+              <Login />
           } 
         />
         <Route 
@@ -138,55 +125,56 @@ const AppContent = () => {
           element={
             isAuthenticated ? 
               <Navigate to="/dashboard" replace /> : 
-              <Signup darkMode={darkMode} />
+              <Signup />
           } 
         />
-        <Route path="/forgot-password" element={<ForgotPassword darkMode={darkMode} />} />
-        <Route path="/reset-password/:token" element={<ResetPassword darkMode={darkMode} />} />
-        <Route path="/terms" element={<Terms darkMode={darkMode} />} />
-        <Route path="/about" element={<About darkMode={darkMode} />} />
-        <Route path="/book-table" element={<BookTable darkMode={darkMode} />} />
-        <Route path="/menu" element={<Menu darkMode={darkMode} />} />
-        <Route path="/cart" element={<Cart darkMode={darkMode} />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/book-table" element={<BookTable />} />
+        <Route path="/menu" element={<Menu />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/feedback" element={<UserFeedback />} />
 
         {/* Protected routes */}
         <Route path="/dashboard" element={
           <PrivateRoute>
-            <UserDashboard darkMode={darkMode} />
+            <UserDashboard />
           </PrivateRoute>
         } />
         <Route path="/my-orders" element={
           <PrivateRoute>
-            <UserOrders darkMode={darkMode} />
+            <UserOrders />
           </PrivateRoute>
         } />
         <Route path="/my-orders/:id" element={
           <PrivateRoute>
-            <OrderDetail darkMode={darkMode} />
+            <OrderDetail />
           </PrivateRoute>
         } />
 
         {/* Admin routes */}
         <Route path="/admin/users" element={
           <PrivateRoute adminOnly={true}>
-            <AdminUsers darkMode={darkMode} />
+            <AdminUsers />
           </PrivateRoute>
         } />
         <Route path="/admin/dashboard" element={
           <PrivateRoute adminOnly={true}>
-            <AdminDashboard darkMode={darkMode} />
+            <AdminDashboard />
           </PrivateRoute>
         } />
         <Route path="/admin/orders" element={
           <PrivateRoute adminOnly={true}>
-            <Orders darkMode={darkMode} />
+            <Orders />
           </PrivateRoute>
         } />
 
         {/* Staff routes */}
         <Route path="/staff/dashboard" element={
           <PrivateRoute staffOnly={true}>
-            <StaffDashboard darkMode={darkMode} />
+            <StaffDashboard />
           </PrivateRoute>
         } />
 
@@ -202,7 +190,7 @@ const AppContent = () => {
         pauseOnFocusLoss
         draggable
         pauseOnHover
-        theme={darkMode ? 'dark' : 'light'}
+        theme="light"
       />
     </div>
   );
