@@ -71,14 +71,14 @@ const Home = () => {
   }, []);
 
   const galleryImages = [
-    '/src/assets/gallery/food1.jpg',
-    '/src/assets/gallery/food2.jpg',
-    '/src/assets/gallery/food3.jpg',
-    '/src/assets/gallery/food4.jpg',
-    '/src/assets/gallery/food5.jpg',
-    '/src/assets/gallery/food6.jpg',
-    '/src/assets/gallery/food7.jpg',
-    '/src/assets/gallery/food8.jpg',
+    '/public/gallery/food1.jpg',
+    '/public/gallery/food2.jpg',
+    '/public/gallery/food3.jpg',
+    '/public/gallery/food4.jpg',
+    '/public/gallery/food5.jpg',
+    '/public/gallery/food6.jpg',
+    '/public/gallery/food7.jpg',
+    '/public/gallery/food8.jpg',
   ];
 
   const handleBookingChange = (e) => {
