@@ -63,3 +63,71 @@ export const getRecentFoodItems = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+export const updateFoodItem = async (req, res) => {
+  try {
+    console.log('Update food item request received');
+    console.log('Food ID:', req.params.id);
+    console.log('Request body:', req.body);
+    console.log('User:', req.user?.email);
+    
+    const { name, description, price, category, foodType } = req.body;
+    const foodId = req.params.id;
+    
+    if (!name || !price || !category || !foodType) {
+      console.log('Missing required fields');
+      return res.status(400).json({ message: 'Required fields are missing' });
+    }
+
+    // Find the existing food item
+    const existingFood = await Food.findById(foodId);
+    if (!existingFood) {
+      console.log('Food item not found:', foodId);
+      return res.status(404).json({ message: 'Food item not found' });
+    }
+
+    console.log('Existing food found:', existingFood.name);
+
+    let imageUrl = existingFood.imageUrl; // Keep existing image by default
+    
+    // If a new image is uploaded, upload to cloudinary
+    if (req.file) {
+      console.log('New image uploaded, uploading to cloudinary');
+      const result = await cloudinary.uploader.upload(req.file.path);
+      imageUrl = result.secure_url;
+    }
+
+    // Update the food item
+    const updatedFood = await Food.findByIdAndUpdate(
+      foodId,
+      {
+        name,
+        description,
+        price,
+        category: category.toLowerCase(),
+        foodType,
+        imageUrl
+      },
+      { new: true, runValidators: true }
+    );
+
+    console.log('Food item updated successfully:', updatedFood.name);
+    res.json(updatedFood);
+  } catch (err) {
+    console.error('Error updating food item:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+export const getFoodItemById = async (req, res) => {
+  try {
+    const food = await Food.findById(req.params.id);
+    if (!food) {
+      return res.status(404).json({ message: 'Food item not found' });
+    }
+    res.json(food);
+  } catch (err) {
+    console.error('Error fetching food item:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};

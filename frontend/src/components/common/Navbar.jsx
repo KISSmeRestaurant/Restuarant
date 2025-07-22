@@ -1,11 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
-import { FaUser, FaShoppingCart, FaChevronDown, FaMoon, FaSun, FaSearch } from 'react-icons/fa';
-import { MdDashboard, MdRestaurantMenu } from 'react-icons/md';
+import { FaUser, FaShoppingCart, FaChevronDown, FaSearch, FaUserCircle, FaCog, FaHistory, FaHeart, FaShoppingBag, FaSignOutAlt } from 'react-icons/fa';
+import { MdDashboard, MdRestaurantMenu, MdEventNote, MdSettings, MdAccountCircle, MdFavorite, MdNotifications } from 'react-icons/md';
 import { useLocation } from 'react-router-dom';
 import { validateToken } from '../../services/auth';
 
-const Navbar = ({ darkMode, toggleDarkMode, isHomePage }) => {
+const Navbar = ({ isHomePage }) => {
   const location = useLocation();
   const [user, setUser] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -154,54 +154,92 @@ const Navbar = ({ darkMode, toggleDarkMode, isHomePage }) => {
                 </button>
 
                 {isProfileOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-                    {user.role === 'staff' && (
-                      <Link
-                        to="/staff/dashboard"
-                        className="flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
-                        onClick={() => setIsProfileOpen(false)}
-                      >
-                        <MdDashboard className="mr-2" />
-                        Staff Dashboard
-                      </Link>
-                    )}
-                    {user.role === 'admin' && (
-                      <Link
-                        to="/admin/dashboard" 
-                        className="flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
-                        onClick={() => setIsProfileOpen(false)}
-                      >
-                        <MdDashboard className="mr-2" />
-                        Admin Dashboard
-                      </Link>
-                    )}
-                    {user.role === 'user' && (
-                      <>
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
+                    {/* User Info Header */}
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                          <span className="text-white font-semibold text-sm">
+                            {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{user.firstName} {user.lastName}</p>
+                          <p className="text-sm text-gray-500 capitalize">{user.role}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Menu Items */}
+                    <div className="py-2">
+                      {user.role === 'staff' && (
                         <Link
-                          to="/dashboard"
-                          className="flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
+                          to="/staff/dashboard"
+                          className="flex items-center px-4 py-3 text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
                           onClick={() => setIsProfileOpen(false)}
                         >
-                          <MdDashboard className="mr-2" />
-                          Dashboard
+                          <MdDashboard className="mr-3 text-lg" />
+                          <span className="font-medium">Staff Dashboard</span>
                         </Link>
-                        
+                      )}
+                      
+                      {user.role === 'admin' && (
                         <Link
-                          to="/my-orders"
-                          className="flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
+                          to="/admin/dashboard" 
+                          className="flex items-center px-4 py-3 text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
                           onClick={() => setIsProfileOpen(false)}
                         >
-                          <MdRestaurantMenu className="mr-2" />
-                          My Orders
+                          <MdDashboard className="mr-3 text-lg" />
+                          <span className="font-medium">Admin Dashboard</span>
                         </Link>
-                      </>
-                    )}
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left flex items-center px-4 py-2 text-gray-800 hover:bg-amber-100"
-                    >
-                      Logout
-                    </button>
+                      )}
+                      
+                      {user.role === 'user' && (
+                        <>
+                          <Link
+                            to="/dashboard"
+                            className="flex items-center px-4 py-3 text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                            onClick={() => setIsProfileOpen(false)}
+                          >
+                            <MdAccountCircle className="mr-3 text-lg" />
+                            <span className="font-medium">My Dashboard</span>
+                          </Link>
+                          
+                          <Link
+                            to="/my-orders"
+                            className="flex items-center px-4 py-3 text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                            onClick={() => setIsProfileOpen(false)}
+                          >
+                            <FaHistory className="mr-3 text-lg" />
+                            <span className="font-medium">Order History</span>
+                          </Link>
+
+                          <div className="border-t border-gray-100 my-2"></div>
+
+                          <Link
+                            to="/notifications"
+                            className="flex items-center px-4 py-3 text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                            onClick={() => setIsProfileOpen(false)}
+                          >
+                            <MdNotifications className="mr-3 text-lg" />
+                            <span className="font-medium">Notifications</span>
+                          </Link>
+                        </>
+                      )}
+
+                      {/* Logout button for all user types */}
+                      <div className="border-t border-gray-100 my-2"></div>
+                      <button
+                        onClick={() => {
+                          handleLogout();
+                          setIsProfileOpen(false);
+                        }}
+                        className="flex items-center w-full px-4 py-3 text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
+                      >
+                        <FaSignOutAlt className="mr-3 text-lg" />
+                        <span className="font-medium">Logout</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -265,52 +303,49 @@ const Navbar = ({ darkMode, toggleDarkMode, isHomePage }) => {
 
             {user && (
               <>
+                <div className="border-t border-amber-600/30 my-2"></div>
+                <div className="px-3 py-2 text-amber-200 text-sm font-medium">
+                  {user.firstName} {user.lastName} ({user.role})
+                </div>
+                
                 {user.role === 'admin' ? (
                   <Link 
                     to="/admin/dashboard" 
-                    className="block px-3 py-2 hover:bg-amber-600/50 rounded transition"
+                    className="flex items-center px-3 py-2 hover:bg-amber-600/50 rounded transition"
                     onClick={() => setIsMenuOpen(false)}
                   >
+                    <MdDashboard className="mr-2" />
                     Admin Dashboard
                   </Link>
                 ) : user.role === 'staff' ? (
                   <Link 
                     to="/staff/dashboard" 
-                    className="block px-3 py-2 hover:bg-amber-600/50 rounded transition"
+                    className="flex items-center px-3 py-2 hover:bg-amber-600/50 rounded transition"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    <div className="flex items-center">
-                      <MdDashboard className="mr-2" />
-                      Staff Dashboard
-                    </div>
+                    <MdDashboard className="mr-2" />
+                    Staff Dashboard
                   </Link>
                 ) : (
                   <>
                     <Link 
                       to="/dashboard" 
-                      className="block px-3 py-2 hover:bg-amber-600/50 rounded transition"
+                      className="flex items-center px-3 py-2 hover:bg-amber-600/50 rounded transition"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      Dashboard
+                      <MdAccountCircle className="mr-2" />
+                      My Dashboard
                     </Link>
                     <Link 
                       to="/my-orders" 
-                      className="block px-3 py-2 hover:bg-amber-600/50 rounded transition"
+                      className="flex items-center px-3 py-2 hover:bg-amber-600/50 rounded transition"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      My Orders
+                      <FaHistory className="mr-2" />
+                      Order History
                     </Link>
                   </>
                 )}
-                <button 
-                  onClick={() => {
-                    handleLogout();
-                    setIsMenuOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-amber-600/50 rounded transition mt-2"
-                >
-                  Logout
-                </button>
               </>
             )}
           </div>

@@ -13,7 +13,7 @@ import { FaUserCog } from 'react-icons/fa';
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen, activeTab, setActiveTab }) => {
   return (
-    <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-gray-800 text-white transition-all duration-300 ease-in-out`}>
+    <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-gray-800 text-white transition-all duration-300 ease-in-out flex flex-col`}>
       <div className="p-4 flex items-center justify-between">
         {sidebarOpen ? (
           <h1 className="text-xl font-bold">Admin Panel</h1>
@@ -29,7 +29,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, activeTab, setActiveTab }) => {
           {sidebarOpen ? <MdClose size={24} /> : <MdMenu size={24} />}
         </button>
       </div>
-      <nav className="mt-6">
+      
+      <nav className="mt-6 flex-1">
         <div
           className={`flex items-center px-4 py-3 cursor-pointer ${activeTab === 'dashboard' ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
           onClick={() => setActiveTab('dashboard')}

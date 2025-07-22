@@ -33,9 +33,18 @@ const Menu = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        
+        // Use relative URLs for development proxy, full URLs for production
+        const categoriesUrl = import.meta.env.DEV 
+          ? '/api/categories' 
+          : 'https://restuarant-sh57.onrender.com/api/categories';
+        const foodsUrl = import.meta.env.DEV 
+          ? '/api/foods' 
+          : 'https://restuarant-sh57.onrender.com/api/foods';
+        
         const [categoriesRes, foodRes] = await Promise.all([
-          axios.get('https://restuarant-sh57.onrender.com/api/categories'),
-          axios.get('https://restuarant-sh57.onrender.com/api/foods')
+          axios.get(categoriesUrl),
+          axios.get(foodsUrl)
         ]);
         setCategories(categoriesRes.data);
         setFoodItems(foodRes.data.map(item => ({
@@ -148,7 +157,12 @@ const Menu = () => {
         paymentMethod: 'cash' // Default to cash on delivery
       };
 
-      const response = await axios.post('https://restuarant-sh57.onrender.com/api/orders', orderData, {
+      // Use relative URL for development proxy, full URL for production
+      const ordersUrl = import.meta.env.DEV 
+        ? '/api/orders' 
+        : 'https://restuarant-sh57.onrender.com/api/orders';
+      
+      const response = await axios.post(ordersUrl, orderData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -176,7 +190,7 @@ const Menu = () => {
   // Calculate totals
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const deliveryFee = deliveryInfo.deliveryOption === 'delivery' ? 5 : 0;
-  const tax = subtotal * 0.1;
+  const tax = subtotal * 0.2; // Changed from 0.1 to 0.2 for 20% VAT
   const total = subtotal + tax + deliveryFee;
 
   // Render components based on checkout step

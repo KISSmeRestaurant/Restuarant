@@ -169,14 +169,14 @@ const Checkout = ({ cart, onBack, onOrderSuccess }) => {
               </div>
               
               <div className="flex justify-between">
-                <span>Tax (10%):</span>
-                <span>${(totalAmount * 0.1).toFixed(2)}</span>
+                <span>VAT (20%):</span>
+                <span>${(totalAmount * 0.2).toFixed(2)}</span>
               </div>
               
               <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t border-gray-200">
                 <span>Total:</span>
                 <span className="text-amber-600">
-                  ${(totalAmount * 1.1).toFixed(2)}
+                  ${(totalAmount * 1.2).toFixed(2)}
                 </span>
               </div>
             </div>

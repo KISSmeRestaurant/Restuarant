@@ -4,10 +4,12 @@ import { FiClock, FiMapPin, FiPhone, FiMail } from 'react-icons/fi';
 import axios from 'axios';
 import Footer from '../components/common/Footer';
 import { useNavigate } from 'react-router-dom';
+import { getPublicFeedback } from '../services/feedback';
 
 const Home = () => {
   const navigate = useNavigate();
   const [recentFoods, setRecentFoods] = useState([]);
+  const [feedback, setFeedback] = useState([]);
   const [bookingData, setBookingData] = useState({
     date: '',
     time: '',
@@ -18,16 +20,54 @@ const Home = () => {
   });
 
   useEffect(() => {
-    const fetchRecentFoods = async () => {
+    const fetchRecentFoods = async (retryCount = 0) => {
       try {
-        const response = await axios.get('https://restuarant-sh57.onrender.com/api/foods/recent');
+        // Use relative URL for development proxy, full URL for production
+        const apiUrl = import.meta.env.DEV 
+          ? '/api/foods/recent' 
+          : 'https://restuarant-sh57.onrender.com/api/foods/recent';
+        
+        const response = await axios.get(apiUrl, {
+          timeout: 10000, // 10 second timeout
+        });
         setRecentFoods(response.data);
       } catch (error) {
         console.error('Error fetching recent foods:', error);
+        
+        // Handle rate limiting with exponential backoff
+        if (error.response?.status === 429 && retryCount < 3) {
+          const retryAfter = error.response.headers['retry-after'] || Math.pow(2, retryCount);
+          console.log(`Rate limited. Retrying after ${retryAfter} seconds...`);
+          
+          setTimeout(() => {
+            fetchRecentFoods(retryCount + 1);
+          }, retryAfter * 1000);
+        } else if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
+          console.log('Local server not available, using fallback data or empty state');
+          // You could set some fallback data here if needed
+          setRecentFoods([]);
+        } else {
+          // For other errors, just log and continue with empty state
+          setRecentFoods([]);
+        }
       }
     };
 
     fetchRecentFoods();
+
+    // Fetch public feedback
+    const fetchFeedback = async () => {
+      try {
+        const response = await getPublicFeedback(6);
+        setFeedback(response.data || []);
+      } catch (error) {
+        console.error('Error fetching feedback:', error);
+        // Keep static testimonials as fallback
+        setFeedback([]);
+      }
+    };
+
+    fetchFeedback();
   }, []);
 
   const galleryImages = [
@@ -285,29 +325,37 @@ const Home = () => {
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Don't just take our word for it - hear from our valued guests
             </p>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate('/feedback')}
+              className="mt-6 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-full hover:from-amber-600 hover:to-orange-600 transition font-semibold shadow-lg"
+            >
+              Write Your Review
+            </motion.button>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {[
+            {(feedback.length > 0 ? feedback : [
               {
-                name: 'Emily & James',
-                comment: 'The perfect anniversary dinner! Every dish was a masterpiece and the service was impeccable.',
+                customerName: 'Emily & James',
+                message: 'The perfect anniversary dinner! Every dish was a masterpiece and the service was impeccable.',
                 rating: 5,
-                date: '2 weeks ago'
+                createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
               },
               {
-                name: 'Michael R.',
-                comment: 'Best steak I\'ve ever had. The ambiance and wine pairing made it an unforgettable experience.',
+                customerName: 'Michael R.',
+                message: 'Best steak I\'ve ever had. The ambiance and wine pairing made it an unforgettable experience.',
                 rating: 5,
-                date: '1 month ago'
+                createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
               },
               {
-                name: 'Sarah K.',
-                comment: 'We come here every Friday. The pasta is divine and the cocktails are creative perfection!',
+                customerName: 'Sarah K.',
+                message: 'We come here every Friday. The pasta is divine and the cocktails are creative perfection!',
                 rating: 5,
-                date: '3 days ago'
+                createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
               }
-            ].map((testimonial, index) => (
+            ]).slice(0, 6).map((testimonial, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
@@ -329,14 +377,25 @@ const Home = () => {
                     </svg>
                   ))}
                 </div>
-                <p className="text-gray-600 italic mb-6">"{testimonial.comment}"</p>
+                <p className="text-gray-600 italic mb-6">"{testimonial.message || testimonial.comment}"</p>
                 <div className="flex items-center">
-                  <div className="w-12 h-12 rounded-full bg-gray-300 mr-4 overflow-hidden">
-                    <div className="bg-gray-400 w-full h-full"></div>
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 mr-4 overflow-hidden flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">
+                      {(testimonial.customerName || testimonial.name)?.charAt(0)}
+                    </span>
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-800">{testimonial.name}</h4>
-                    <p className="text-sm text-gray-500">{testimonial.date}</p>
+                    <h4 className="font-bold text-gray-800">{testimonial.customerName || testimonial.name}</h4>
+                    <p className="text-sm text-gray-500">
+                      {testimonial.createdAt 
+                        ? new Date(testimonial.createdAt).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            year: 'numeric'
+                          })
+                        : testimonial.date
+                      }
+                    </p>
                   </div>
                 </div>
               </motion.div>
