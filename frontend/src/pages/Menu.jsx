@@ -11,6 +11,7 @@ const Menu = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
+  const [foodTypeFilter, setFoodTypeFilter] = useState('all');
   const [foodItems, setFoodItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [cart, setCart] = useState([]);
@@ -90,12 +91,27 @@ const Menu = () => {
     };
   }, [navigate, showLoginModal]);
 
-  const filteredItems = activeCategory === 'all' 
-    ? foodItems 
-    : foodItems.filter(item => {
-        const categoryObj = categories.find(cat => cat._id === item.category || cat.name === item.category);
-        return categoryObj ? true : false;
-      });
+  const filteredItems = foodItems.filter(item => {
+    // Apply category filter
+    let categoryMatch = true;
+    if (activeCategory !== 'all') {
+      // Check if item.category matches the selected category ID or name
+      const categoryObj = categories.find(cat => cat._id === activeCategory);
+      if (categoryObj) {
+        categoryMatch = item.category === categoryObj._id || item.category === categoryObj.name;
+      } else {
+        categoryMatch = false;
+      }
+    }
+
+    // Apply food type filter
+    let foodTypeMatch = true;
+    if (foodTypeFilter !== 'all') {
+      foodTypeMatch = item.foodType === foodTypeFilter;
+    }
+
+    return categoryMatch && foodTypeMatch;
+  });
 
   // Cart functions
   const handleAddToCart = (item) => {
@@ -237,11 +253,13 @@ const Menu = () => {
         return (
           <MenuPage 
             activeCategory={activeCategory}
+            foodTypeFilter={foodTypeFilter}
             categories={categories}
             filteredItems={filteredItems}
             foodItems={foodItems}
             cartItemCount={cart.reduce((count, item) => count + item.quantity, 0)}
             onCategoryChange={setActiveCategory}
+            onFoodTypeFilterChange={setFoodTypeFilter}
             onAddToCart={handleAddToCart}
             onViewCart={() => setCheckoutStep('cart')}
             showLoginModal={showLoginModal}

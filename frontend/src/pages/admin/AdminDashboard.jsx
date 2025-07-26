@@ -9,6 +9,7 @@ import SettingsTab from './SettingsTab';
 import Reservations from './Reservations';
 import Orders from './Orders';
 import StaffShifts from './StaffShifts';
+import TableManagementTab from './TableManagementTab';
 
 const AdminDashboard = () => {
   const [admin, setAdmin] = useState(null);
@@ -247,6 +248,12 @@ const fetchAdminData = async () => {
   {activeTab === 'staff-shifts' && (
     <div className="mb-8">
       <StaffShifts />
+    </div>
+  )}
+
+  {activeTab === 'tables' && (
+    <div className="mb-8">
+      <TableManagementTab />
     </div>
   )}
 

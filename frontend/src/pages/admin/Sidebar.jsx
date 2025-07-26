@@ -7,7 +7,8 @@ import {
   MdClose,
   MdEventNote,
   MdShoppingCart, // Add this for orders icon
-  MdAccessTime // Add this for staff shifts icon
+  MdAccessTime, // Add this for staff shifts icon
+  MdTableRestaurant // Add this for table management icon
 } from 'react-icons/md';
 import { FaUserCog } from 'react-icons/fa';
 
@@ -77,6 +78,14 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, activeTab, setActiveTab }) => {
         >
           <MdAccessTime className="text-xl" />
           {sidebarOpen && <span className="ml-3">Staff Shifts</span>}
+        </div>
+        
+        <div
+          className={`flex items-center px-4 py-3 cursor-pointer ${activeTab === 'tables' ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
+          onClick={() => setActiveTab('tables')}
+        >
+          <MdTableRestaurant className="text-xl" />
+          {sidebarOpen && <span className="ml-3">Table Management</span>}
         </div>
         
         <div

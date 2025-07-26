@@ -83,9 +83,23 @@ const OrderSchema = new mongoose.Schema({
     notes: String,
     deliveryType: {
       type: String,
-      enum: ['delivery', 'pickup'],
+      enum: ['delivery', 'pickup', 'dine-in'],
       default: 'delivery'
     }
+  },
+
+  // Table assignment for dine-in orders
+  table: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Table',
+    default: null
+  },
+
+  // Order type
+  orderType: {
+    type: String,
+    enum: ['delivery', 'pickup', 'dine-in'],
+    default: 'delivery'
   },
 
   paymentInfo: {

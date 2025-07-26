@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import StaffShift from '../models/StaffShift.js';
 import Settings from '../models/Settings.js';
 import Order from '../models/Order.js';
+import Table from '../models/Table.js';
 
 export const getAdminDetails = async (req, res, next) => {
   try {
@@ -104,6 +105,127 @@ export const deleteUser = async (req, res, next) => {
     }
 
     res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Table Management Functions
+export const getAllTables = async (req, res, next) => {
+  try {
+    const tables = await Table.find({ isActive: true })
+      .populate('currentOrder')
+      .sort({ tableNumber: 1 });
+
+    res.status(200).json({
+      status: 'success',
+      data: tables
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const createTable = async (req, res, next) => {
+  try {
+    const { tableNumber, capacity, location, position, description } = req.body;
+
+    // Check if table number already exists
+    const existingTable = await Table.findOne({ tableNumber });
+    if (existingTable) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Table number already exists'
+      });
+    }
+
+    const table = await Table.create({
+      tableNumber,
+      capacity,
+      location,
+      position,
+      description
+    });
+
+    res.status(201).json({
+      status: 'success',
+      data: table
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateTable = async (req, res, next) => {
+  try {
+    const { tableNumber, capacity, location, position, description, status } = req.body;
+
+    const table = await Table.findById(req.params.id);
+    if (!table) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'Table not found'
+      });
+    }
+
+    // Check if table number is being changed and if it already exists
+    if (tableNumber && tableNumber !== table.tableNumber) {
+      const existingTable = await Table.findOne({ tableNumber });
+      if (existingTable) {
+        return res.status(400).json({
+          status: 'fail',
+          message: 'Table number already exists'
+        });
+      }
+    }
+
+    const updatedTable = await Table.findByIdAndUpdate(
+      req.params.id,
+      {
+        tableNumber,
+        capacity,
+        location,
+        position,
+        description,
+        status
+      },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      status: 'success',
+      data: updatedTable
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteTable = async (req, res, next) => {
+  try {
+    const table = await Table.findById(req.params.id);
+    if (!table) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'Table not found'
+      });
+    }
+
+    // Check if table has active orders
+    if (table.currentOrder) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Cannot delete table with active orders'
+      });
+    }
+
+    // Soft delete by setting isActive to false
+    await Table.findByIdAndUpdate(req.params.id, { isActive: false });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Table deleted successfully'
+    });
   } catch (err) {
     next(err);
   }
