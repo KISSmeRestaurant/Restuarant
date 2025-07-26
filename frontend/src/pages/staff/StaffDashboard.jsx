@@ -18,6 +18,7 @@ import OrdersTab from './OrdersTab';
 import ReservationsTab from './ReservationsTab';
 import KitchenTab from './KitchenTab';
 import FeedbackTab from './FeedbackTab';
+import TablesTab from './TablesTab';
 
 const StaffDashboard = () => {
   const [orders, setOrders] = useState([]);
@@ -453,6 +454,17 @@ const StaffDashboard = () => {
             </button>
             
             <button
+              onClick={() => setActiveTab('tables')}
+              className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'tables' ? 
+                'border-b-2 border-orange-500 text-orange-600' : 
+                'text-gray-500 hover:text-gray-700'}`}
+            >
+              <div className="flex items-center">
+                <FaTable className="mr-2 text-lg" /> Tables
+              </div>
+            </button>
+            
+            <button
               onClick={() => setActiveTab('feedback')}
               className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'feedback' ? 
                 'border-b-2 border-purple-500 text-purple-600' : 
@@ -498,6 +510,10 @@ const StaffDashboard = () => {
             orders={filteredOrders} 
             updateOrderStatus={updateOrderStatus}
           />
+        )}
+
+        {activeTab === 'tables' && (
+          <TablesTab />
         )}
 
         {activeTab === 'feedback' && (

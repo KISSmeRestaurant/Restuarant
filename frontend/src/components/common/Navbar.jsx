@@ -98,14 +98,6 @@ const Navbar = ({ isHomePage }) => {
     navigate('/');
   };
 
-  const handleBookTableClick = () => {
-    if (!user) {
-      navigate('/login', { state: { from: '/book-table' } });
-    } else {
-      navigate('/book-table');
-    }
-  };
-
   return (
     <nav className={`${onHomePage ? 'absolute top-0' : 'fixed top-0'} w-full z-50 h-16`}>
       <div className="container mx-auto px-1 h-full pt-2">
@@ -117,18 +109,10 @@ const Navbar = ({ isHomePage }) => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
-            <Link to="/" className="hover:text-amber-200 transition">Home</Link>
-            <Link to="/menu" className="hover:text-amber-200 transition">Menu</Link>
             <Link to="/about" className="hover:text-amber-200 transition">About</Link>
             
-            {/* Book a Table button - shown for non-logged in users and regular users */}
-            {(user?.role === 'user' || !user) && (
-              <button 
-                onClick={handleBookTableClick}
-                className="bg-white text-amber-600 px-4 py-2 rounded-full hover:bg-amber-100 transition"
-              >
-                Book a Table
-              </button>
+            {!user && (
+              <Link to="/login" className="hover:text-amber-200 transition">Register</Link>
             )}
 
             {user?.role === 'user' && (
@@ -267,20 +251,6 @@ const Navbar = ({ isHomePage }) => {
         {isMenuOpen && (
           <div className="md:hidden mt-2 rounded-lg bg-gradient-to-b from-amber-800/95 to-amber-700/95 text-white shadow-lg px-6 py-4 backdrop-blur-sm">
             <Link 
-              to="/" 
-              className="block px-3 py-2 hover:bg-amber-600/50 rounded transition"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Home
-            </Link>
-            <Link 
-              to="/menu" 
-              className="block px-3 py-2 hover:bg-amber-600/50 rounded transition"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Menu
-            </Link>
-            <Link 
               to="/about" 
               className="block px-3 py-2 hover:bg-amber-600/50 rounded transition"
               onClick={() => setIsMenuOpen(false)}
@@ -288,17 +258,14 @@ const Navbar = ({ isHomePage }) => {
               About
             </Link>
             
-            {/* Mobile Book a Table button - shown for non-logged in users and regular users */}
-            {(user?.role === 'user' || !user) && (
-              <button 
-                onClick={() => {
-                  handleBookTableClick();
-                  setIsMenuOpen(false);
-                }}
-                className="w-full px-3 py-2 bg-white text-amber-600 rounded-full text-center hover:bg-amber-100 transition mt-2"
+            {!user && (
+              <Link 
+                to="/login" 
+                className="block px-3 py-2 hover:bg-amber-600/50 rounded transition"
+                onClick={() => setIsMenuOpen(false)}
               >
-                Book a Table
-              </button>
+                Register
+              </Link>
             )}
 
             {user && (

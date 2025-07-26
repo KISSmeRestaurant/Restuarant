@@ -1,166 +1,202 @@
 import { motion } from 'framer-motion';
-import { FiShoppingCart, FiChevronLeft, FiChevronRight, FiTrash2, FiPlus, FiMinus } from 'react-icons/fi';
+import { FiCheckCircle, FiClock, FiMapPin, FiPhone, FiUser, FiHome } from 'react-icons/fi';
 
-const CartPage = ({ 
-  cart, 
-  subtotal, 
-  tax, 
-  total, 
-  updateCartItem, 
-  removeFromCart, 
-  onBack, 
-  onCheckout 
-}) => {
+const ConfirmationPage = ({ orderDetails, onBackToMenu }) => {
+  // Provide default values to prevent undefined errors
+  const order = orderDetails || {};
+  const items = order.items || [];
+  const customerInfo = order.customerInfo || order.deliveryInfo || {};
+  const orderId = order.orderId || order._id || 'N/A';
+  const estimatedDelivery = order.estimatedDelivery || 'N/A';
+  const total = order.total || 0;
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
-        {/* Header */}
-        <div className="bg-amber-600 p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <FiShoppingCart className="text-2xl mr-3" />
-              <h2 className="text-2xl font-bold">Your Order</h2>
+      <div className="max-w-4xl mx-auto">
+        {/* Success Header */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center mb-8"
+        >
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FiCheckCircle className="w-10 h-10 text-green-600" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Order Confirmed!</h1>
+          <p className="text-gray-600">Thank you for your order. We're preparing your delicious meal.</p>
+        </motion.div>
+
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Order Details */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white rounded-xl shadow-md overflow-hidden"
+          >
+            <div className="bg-amber-600 text-white p-6">
+              <h2 className="text-xl font-bold">Order Details</h2>
+              <p className="text-amber-100">Order ID: #{orderId}</p>
             </div>
-            <button 
-              onClick={onBack}
-              className="flex items-center text-white hover:text-amber-100"
-            >
-              <FiChevronLeft className="mr-1" />
-              Back to Menu
-            </button>
-          </div>
-        </div>
-        
-        {cart.length === 0 ? (
-          <div className="text-center p-12">
-            <div className="text-7xl mb-6">🛒</div>
-            <h3 className="text-2xl font-medium text-gray-700 mb-2">Your cart is empty</h3>
-            <p className="text-gray-500 mb-6">Looks like you haven't added anything to your cart yet</p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onBack}
-              className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-medium"
-            >
-              Browse Menu
-            </motion.button>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {/* Cart Items */}
-            {cart.map(item => (
-              <motion.div 
-                key={item._id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="p-6 flex flex-col md:flex-row gap-6"
-              >
-                {/* Item Image */}
-                <div className="flex-shrink-0 w-24 h-24 md:w-32 md:h-32 bg-gray-200 rounded-lg overflow-hidden">
-                  {item.imageUrl ? (
-                    <img 
-                      src={item.imageUrl} 
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-amber-50 flex items-center justify-center">
-                      <span className="text-gray-400 text-xs">No image</span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Item Details */}
-                <div className="flex-grow">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-800">{item.name}</h3>
-                      <p className="text-amber-600 font-medium">${item.price.toFixed(2)}</p>
-                    </div>
-                    <button 
-                      onClick={() => removeFromCart(item._id)}
-                      className="p-2 text-red-500 hover:text-red-600 transition"
-                    >
-                      <FiTrash2 />
-                    </button>
-                  </div>
-                  
-                  {/* Quantity Controls */}
-                  <div className="mt-4 flex items-center">
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => updateCartItem(item._id, item.quantity - 1)}
-                      className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 transition"
-                    >
-                      <FiMinus />
-                    </motion.button>
-                    
-                    <span className="mx-4 w-8 text-center font-medium">{item.quantity}</span>
-                    
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => updateCartItem(item._id, item.quantity + 1)}
-                      className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 transition"
-                    >
-                      <FiPlus />
-                    </motion.button>
-                    
-                    <span className="ml-auto font-bold">
-                      ${(item.price * item.quantity).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
             
-            {/* Order Summary */}
-            <div className="p-6 bg-gray-50">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Order Summary</h3>
-              
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium">${subtotal.toFixed(2)}</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Tax (10%)</span>
-                  <span className="font-medium">${tax.toFixed(2)}</span>
-                </div>
-                
-                <div className="flex justify-between pt-3 border-t border-gray-200">
-                  <span className="text-lg font-bold text-gray-800">Total</span>
-                  <span className="text-xl font-bold text-amber-600">
-                    ${total.toFixed(2)}
-                  </span>
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <FiClock className="text-amber-600 mr-3" />
+                <div>
+                  <p className="font-medium text-gray-800">Estimated Delivery</p>
+                  <p className="text-gray-600">{estimatedDelivery}</p>
                 </div>
               </div>
               
-              <div className="flex flex-col sm:flex-row gap-3">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={onBack}
-                  className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition flex-1"
-                >
-                  Continue Shopping
-                </motion.button>
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-800 border-b pb-2">Items Ordered</h3>
+                {items.length > 0 ? (
+                  items.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium text-gray-800">
+                          {item.food?.name || item.name || 'Unknown Item'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          ${(item.price || 0).toFixed(2)} × {item.quantity || 1}
+                        </p>
+                      </div>
+                      <span className="font-medium">
+                        ${((item.price || 0) * (item.quantity || 1)).toFixed(2)}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500">No items found</p>
+                )}
                 
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={onCheckout}
-                  className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition flex-1"
-                >
-                  Proceed to Checkout
-                </motion.button>
+                <div className="border-t pt-4">
+                  <div className="flex justify-between items-center font-bold text-lg">
+                    <span>Total</span>
+                    <span className="text-amber-600">${total.toFixed(2)}</span>
+                  </div>
+                </div>
               </div>
             </div>
+          </motion.div>
+
+          {/* Delivery Information */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-white rounded-xl shadow-md overflow-hidden"
+          >
+            <div className="bg-gray-800 text-white p-6">
+              <h2 className="text-xl font-bold">Delivery Information</h2>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="flex items-start">
+                <FiUser className="text-gray-600 mr-3 mt-1" />
+                <div>
+                  <p className="font-medium text-gray-800">Customer Name</p>
+                  <p className="text-gray-600">{customerInfo.name || 'N/A'}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start">
+                <FiPhone className="text-gray-600 mr-3 mt-1" />
+                <div>
+                  <p className="font-medium text-gray-800">Phone Number</p>
+                  <p className="text-gray-600">{customerInfo.phone || 'N/A'}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start">
+                <FiMapPin className="text-gray-600 mr-3 mt-1" />
+                <div>
+                  <p className="font-medium text-gray-800">Delivery Address</p>
+                  <p className="text-gray-600">
+                    {customerInfo.address || 'N/A'}
+                    {customerInfo.city && `, ${customerInfo.city}`}
+                  </p>
+                </div>
+              </div>
+              
+              {customerInfo.notes && (
+                <div className="flex items-start">
+                  <FiHome className="text-gray-600 mr-3 mt-1" />
+                  <div>
+                    <p className="font-medium text-gray-800">Delivery Notes</p>
+                    <p className="text-gray-600">{customerInfo.notes}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Status Timeline */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white rounded-xl shadow-md p-6 mt-8"
+        >
+          <h3 className="text-xl font-bold text-gray-800 mb-6">Order Status</h3>
+          
+          <div className="flex items-center justify-between relative">
+            <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 -z-10"></div>
+            
+            <div className="flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center mb-2">
+                <FiCheckCircle />
+              </div>
+              <span className="text-sm font-medium text-green-600">Confirmed</span>
+            </div>
+            
+            <div className="flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full bg-amber-600 text-white flex items-center justify-center mb-2 animate-pulse">
+                <FiClock />
+              </div>
+              <span className="text-sm font-medium text-amber-600">Preparing</span>
+            </div>
+            
+            <div className="flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center mb-2">
+                <FiMapPin />
+              </div>
+              <span className="text-sm font-medium text-gray-600">On the way</span>
+            </div>
+            
+            <div className="flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center mb-2">
+                <FiCheckCircle />
+              </div>
+              <span className="text-sm font-medium text-gray-600">Delivered</span>
+            </div>
           </div>
-        )}
+        </motion.div>
+
+        {/* Action Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="text-center mt-8"
+        >
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onBackToMenu}
+            className="px-8 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition shadow-md"
+          >
+            Order More Food
+          </motion.button>
+          
+          <p className="text-gray-500 mt-4">
+            Need help? Contact us at <span className="text-amber-600 font-medium">support@restaurant.com</span>
+          </p>
+        </motion.div>
       </div>
     </div>
   );
 };
 
-export default CartPage;
+export default ConfirmationPage;

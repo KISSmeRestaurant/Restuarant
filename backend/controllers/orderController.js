@@ -4,14 +4,17 @@ import Food from '../models/Food.js';
 
 export const createOrder = async (req, res) => {
   try {
-    const { items, deliveryInfo } = req.body;
+    const { items, deliveryInfo, paymentMethod } = req.body;
     const userId = req.user.id;
 
-    // Calculate total amount
-    let totalAmount = 0;
+    // Calculate order items and subtotal
+    let subtotal = 0;
     const orderItems = await Promise.all(items.map(async item => {
       const food = await Food.findById(item.food);
-      totalAmount += food.price * item.quantity;
+      if (!food) {
+        throw new Error(`Food item with ID ${item.food} not found`);
+      }
+      subtotal += food.price * item.quantity;
       return {
         food: food._id,
         quantity: item.quantity,
@@ -19,18 +22,53 @@ export const createOrder = async (req, res) => {
       };
     }));
 
+    // Calculate pricing breakdown
+    const vatRate = 20; // 20% VAT
+    const netAmount = subtotal / (1 + vatRate / 100);
+    const vatAmount = subtotal - netAmount;
+    const deliveryFee = deliveryInfo && deliveryInfo.deliveryOption === 'delivery' ? 5 : 0;
+    const serviceCharge = 0; // No service charge for now
+    const totalAmount = subtotal + deliveryFee + serviceCharge;
+
+    const pricing = {
+      subtotal: subtotal,
+      netAmount: netAmount,
+      vatAmount: vatAmount,
+      vatRate: vatRate,
+      serviceCharge: serviceCharge,
+      deliveryFee: deliveryFee,
+      totalAmount: totalAmount,
+      currency: 'USD',
+      currencySymbol: '$'
+    };
+
     const order = new Order({
       user: userId,
       items: orderItems,
-      totalAmount,
-      deliveryInfo
+      totalAmount: totalAmount, // Legacy field
+      pricing: pricing,
+      deliveryInfo: {
+        name: deliveryInfo && deliveryInfo.name ? deliveryInfo.name : '',
+        phone: deliveryInfo && deliveryInfo.phone ? deliveryInfo.phone : '',
+        address: deliveryInfo && deliveryInfo.address ? deliveryInfo.address : '',
+        city: deliveryInfo && deliveryInfo.city ? deliveryInfo.city : '',
+        notes: deliveryInfo && deliveryInfo.notes ? deliveryInfo.notes : '',
+        deliveryType: deliveryInfo && deliveryInfo.deliveryOption ? deliveryInfo.deliveryOption : 'delivery'
+      },
+      paymentInfo: {
+        method: paymentMethod || 'cash',
+        status: 'pending'
+      }
     });
 
     await order.save();
     res.status(201).json(order);
   } catch (err) {
     console.error('Error creating order:', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: err.message 
+    });
   }
 };
 
@@ -60,8 +98,6 @@ export const updateOrderStatus = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
-// Add these new methods to your orderController.js
 
 export const getUserOrders = async (req, res) => {
   try {

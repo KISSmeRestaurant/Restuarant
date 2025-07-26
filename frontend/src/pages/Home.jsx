@@ -121,14 +121,24 @@ const Home = () => {
             <p className="text-xl md:text-2xl text-white mb-8 max-w-2xl mx-auto">
               Where every bite tells a story and every moment becomes a memory
             </p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/menu')}
-              className="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-8 py-3 rounded-lg text-lg transition"
-            >
-              Order Foods
-            </motion.button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate('/menu')}
+                className="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-8 py-3 rounded-lg text-lg transition"
+              >
+                Order Foods
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate('/book-table')}
+                className="bg-white text-amber-600 hover:bg-amber-50 border-2 border-amber-600 font-semibold px-8 py-3 rounded-lg text-lg transition"
+              >
+                Dine In
+              </motion.button>
+            </div>
           </motion.div>
         </div>
 

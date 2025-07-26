@@ -12,7 +12,9 @@ const MenuPage = ({
   filteredItems, 
   foodItems,
   cartItemCount,
+  foodTypeFilter,
   onCategoryChange, 
+  onFoodTypeFilterChange,
   onAddToCart,
   onViewCart,
   showLoginModal,
@@ -65,17 +67,66 @@ const MenuPage = ({
           </p>
         </motion.div>
 
-        {/* Search Bar */}
+        {/* Search Bar and Food Type Filters */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="mb-12 max-w-2xl mx-auto"
+          className="mb-12 max-w-4xl mx-auto"
         >
-          <SearchBar 
-            allItems={foodItems} 
-            onSearchResults={setSearchResults}
-          />
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            {/* Search Bar */}
+            <div className="flex-1 w-full">
+              <SearchBar 
+                allItems={foodItems} 
+                onSearchResults={setSearchResults}
+              />
+            </div>
+            
+            {/* Food Type Filters */}
+            <div className="flex gap-2 flex-shrink-0">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onFoodTypeFilterChange('all')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  foodTypeFilter === 'all'
+                    ? 'bg-amber-600 text-white shadow-md'
+                    : 'bg-white text-gray-700 border border-gray-200 hover:border-amber-300 hover:bg-amber-50'
+                }`}
+              >
+                All
+              </motion.button>
+              
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onFoodTypeFilterChange('veg')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                  foodTypeFilter === 'veg'
+                    ? 'bg-green-600 text-white shadow-md'
+                    : 'bg-white text-gray-700 border border-gray-200 hover:border-green-300 hover:bg-green-50'
+                }`}
+              >
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                Veg
+              </motion.button>
+              
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onFoodTypeFilterChange('non-veg')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                  foodTypeFilter === 'non-veg'
+                    ? 'bg-red-600 text-white shadow-md'
+                    : 'bg-white text-gray-700 border border-gray-200 hover:border-red-300 hover:bg-red-50'
+                }`}
+              >
+                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                Non-Veg
+              </motion.button>
+            </div>
+          </div>
         </motion.div>
 
         {/* Mobile Category Toggle */}

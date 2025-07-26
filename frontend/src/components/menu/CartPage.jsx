@@ -2,11 +2,11 @@ import { motion } from 'framer-motion';
 import { FiShoppingCart, FiChevronLeft, FiChevronRight, FiTrash2, FiArrowLeft } from 'react-icons/fi';
 
 const CartPage = ({ 
-  cart, 
-  subtotal, 
-  tax, 
-  deliveryFee,
-  total, 
+  cart = [], 
+  subtotal = 0, 
+  tax = 0, 
+  deliveryFee = 0,
+  total = 0, 
   updateCartItem, 
   removeFromCart, 
   onBack, 
@@ -30,8 +30,8 @@ const CartPage = ({
                 Your Order
               </h2>
             </div>
-            <span className="bg-white text-amber-600 px-3 py-1 rounded-full font-medium">
-              {cart.reduce((sum, item) => sum + item.quantity, 0)} items
+              <span className="bg-white text-amber-600 px-3 py-1 rounded-full font-medium">
+              {cart.reduce((sum, item) => sum + (item.quantity || 0), 0)} items
             </span>
           </div>
         </div>

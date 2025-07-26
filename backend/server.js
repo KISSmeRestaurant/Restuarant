@@ -20,11 +20,12 @@ import orderRoutes from './routes/orderRoutes.js';
 import staffRoutes from './routes/staffRoutes.js';
 import reservationRoutes from './routes/reservations.js';
 import feedbackRoutes from './routes/feedbackRoutes.js';
+import tableRoutes from './routes/tableRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-dotenv.config({ path: './config.env' });
+dotenv.config();
 
 const app = express();
 
@@ -125,6 +126,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/reservations', reservationRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/tables', tableRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

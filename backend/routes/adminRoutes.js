@@ -19,7 +19,11 @@ import {
   calculateOrderTotals,
   resetSettings,
   getOrderStats,
-  getOrderAnalytics
+  getOrderAnalytics,
+  getAllTables,
+  createTable,
+  updateTable,
+  deleteTable
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -50,5 +54,11 @@ router.post('/settings/reset', admin, resetSettings);
 // Order statistics routes
 router.get('/orders/stats', admin, getOrderStats);
 router.get('/orders/analytics', admin, getOrderAnalytics);
+
+// Table management routes
+router.get('/tables', admin, getAllTables);
+router.post('/tables', admin, createTable);
+router.patch('/tables/:id', admin, updateTable);
+router.delete('/tables/:id', admin, deleteTable);
 
 export default router;
