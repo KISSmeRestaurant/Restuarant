@@ -12,6 +12,8 @@ import {
   getOccupiedTables,
   updateTableStatus,
   assignOrderToTable,
+  addItemsToTableOrder,
+  getTableBill,
   freeTable
 } from '../controllers/tableController.js';
 
@@ -24,8 +26,10 @@ router.get('/', auth, staff, getAllTables);
 router.get('/available', auth, staff, getAvailableTables);
 router.get('/occupied', auth, staff, getOccupiedTables);
 router.get('/:id', auth, staff, getTableById);
+router.get('/:id/bill', auth, staff, getTableBill);
 router.patch('/:id/status', auth, staff, updateTableStatus);
 router.patch('/:id/assign-order', auth, staff, assignOrderToTable);
+router.patch('/:id/add-items', auth, staff, addItemsToTableOrder);
 router.patch('/:id/free', auth, staff, freeTable);
 
 // Admin routes - full CRUD operations

@@ -372,21 +372,49 @@ const deleteUser = async () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.isActive ? (
-                        <>
-                          <FaRegCheckCircle className="mr-1" />
-                          Active
-                        </>
-                      ) : (
-                        <>
-                          <FaRegTimesCircle className="mr-1" />
-                          Inactive
-                        </>
+                    <div className="flex flex-col space-y-1">
+                      {/* Account Status */}
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {user.isActive ? (
+                          <>
+                            <FaRegCheckCircle className="mr-1" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <FaRegTimesCircle className="mr-1" />
+                            Inactive
+                          </>
+                        )}
+                      </span>
+                      
+                      {/* Online Status */}
+                      <span className={`px-2 inline-flex text-xs leading-5 font-medium rounded-full ${
+                        user.isOnline ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        <div className={`w-2 h-2 rounded-full mr-1 mt-0.5 ${
+                          user.isOnline ? 'bg-blue-500' : 'bg-gray-400'
+                        }`}></div>
+                        {user.isOnline ? 'Online' : 'Offline'}
+                      </span>
+                      
+                      {/* Staff Shift Status */}
+                      {user.role === 'staff' && user.hasActiveShift && (
+                        <span className="px-2 inline-flex text-xs leading-5 font-medium rounded-full bg-yellow-100 text-yellow-800">
+                          <FaClock className="mr-1 mt-0.5" />
+                          On Shift
+                        </span>
                       )}
-                    </span>
+                      
+                      {/* Last Seen */}
+                      {user.lastSeen && !user.isOnline && (
+                        <span className="text-xs text-gray-500">
+                          Last seen: {new Date(user.lastSeen).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">

@@ -17,6 +17,7 @@ import BookTable from './pages/BookaTable';
 import Menu from './pages/Menu';
 import Orders from './pages/admin/Orders';
 import StaffDashboard from './pages/staff/StaffDashboard';
+import Tables from './pages/staff/Tables';
 import Cart from './components/common/Cart';
 import OrderDetail from './pages/users/OrderDetail';  
 import UserOrders from './pages/users/UserOrders';  
@@ -175,6 +176,11 @@ const AppContent = () => {
         <Route path="/staff/dashboard" element={
           <PrivateRoute staffOnly={true}>
             <StaffDashboard />
+          </PrivateRoute>
+        } />
+        <Route path="/staff/tables" element={
+          <PrivateRoute staffOnly={true}>
+            <Tables />
           </PrivateRoute>
         } />
 

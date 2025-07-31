@@ -1,4 +1,4 @@
-import { FaClock, FaCheckCircle, FaUtensils, FaHistory } from 'react-icons/fa';
+import { FaClock, FaCheckCircle, FaUtensils, FaHistory, FaTable } from 'react-icons/fa';
 import { MdKitchen, MdDeliveryDining } from 'react-icons/md';
 import { motion } from 'framer-motion';
 
@@ -120,6 +120,20 @@ const KitchenTab = ({ orders, updateOrderStatus }) => {
                     <div className="font-medium text-gray-800">Order #{order._id.slice(-6).toUpperCase()}</div>
                     <div className="text-xs text-gray-500">{formatTime(order.createdAt)}</div>
                   </div>
+                  
+                  {/* Table Information */}
+                  {order.table && (
+                    <div className="mb-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center text-blue-800">
+                        <FaTable className="mr-2 text-blue-600" />
+                        <span className="font-semibold">Table {order.table.tableNumber || order.table.number}</span>
+                        <span className="ml-2 text-sm text-blue-600">
+                          ({order.table.capacity} seats - {order.table.location})
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="text-sm text-gray-600 mb-3">
                     {order.items.map((item, i) => (
                       <div key={i} className="flex justify-between py-1 border-b border-gray-100 last:border-0">
@@ -128,9 +142,9 @@ const KitchenTab = ({ orders, updateOrderStatus }) => {
                       </div>
                     ))}
                   </div>
-                  {order.note && (
+                  {order.deliveryInfo?.notes && (
                     <div className="text-xs bg-amber-50 text-amber-800 p-2 rounded mb-3">
-                      <span className="font-medium">Note:</span> {order.note}
+                      <span className="font-medium">Note:</span> {order.deliveryInfo.notes}
                     </div>
                   )}
                   <button
@@ -180,6 +194,20 @@ const KitchenTab = ({ orders, updateOrderStatus }) => {
                     <div className="font-medium text-gray-800">Order #{order._id.slice(-6).toUpperCase()}</div>
                     <div className="text-xs text-gray-500">{formatTime(order.updatedAt)}</div>
                   </div>
+                  
+                  {/* Table Information */}
+                  {order.table && (
+                    <div className="mb-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center text-blue-800">
+                        <FaTable className="mr-2 text-blue-600" />
+                        <span className="font-semibold">Table {order.table.tableNumber || order.table.number}</span>
+                        <span className="ml-2 text-sm text-blue-600">
+                          ({order.table.capacity} seats - {order.table.location})
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="text-sm text-gray-600 mb-3">
                     {order.items.map((item, i) => (
                       <div key={i} className="flex justify-between py-1 border-b border-gray-100 last:border-0">
@@ -188,6 +216,11 @@ const KitchenTab = ({ orders, updateOrderStatus }) => {
                       </div>
                     ))}
                   </div>
+                  {order.deliveryInfo?.notes && (
+                    <div className="text-xs bg-amber-50 text-amber-800 p-2 rounded mb-3">
+                      <span className="font-medium">Note:</span> {order.deliveryInfo.notes}
+                    </div>
+                  )}
                   <button
                     onClick={() => updateOrderStatus(order._id, 'ready')}
                     className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center justify-center"
@@ -235,6 +268,20 @@ const KitchenTab = ({ orders, updateOrderStatus }) => {
                     <div className="font-medium text-gray-800">Order #{order._id.slice(-6).toUpperCase()}</div>
                     <div className="text-xs text-gray-500">{formatTime(order.updatedAt)}</div>
                   </div>
+                  
+                  {/* Table Information */}
+                  {order.table && (
+                    <div className="mb-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center text-blue-800">
+                        <FaTable className="mr-2 text-blue-600" />
+                        <span className="font-semibold">Table {order.table.tableNumber || order.table.number}</span>
+                        <span className="ml-2 text-sm text-blue-600">
+                          ({order.table.capacity} seats - {order.table.location})
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="text-sm text-gray-600 mb-3">
                     {order.items.map((item, i) => (
                       <div key={i} className="flex justify-between py-1 border-b border-gray-100 last:border-0">
@@ -243,6 +290,11 @@ const KitchenTab = ({ orders, updateOrderStatus }) => {
                       </div>
                     ))}
                   </div>
+                  {order.deliveryInfo?.notes && (
+                    <div className="text-xs bg-amber-50 text-amber-800 p-2 rounded mb-3">
+                      <span className="font-medium">Note:</span> {order.deliveryInfo.notes}
+                    </div>
+                  )}
                   <button
                     onClick={() => updateOrderStatus(order._id, 'delivered')}
                     className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center justify-center"

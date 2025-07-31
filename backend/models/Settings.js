@@ -204,6 +204,47 @@ const SettingsSchema = new mongoose.Schema({
     }
   },
 
+  // Staff Salary Settings
+  salarySettings: {
+    defaultHourlyRate: {
+      type: Number,
+      default: 12.50 // £12.50 per hour (UK minimum wage for over 23s)
+    },
+    overtimeRate: {
+      type: Number,
+      default: 18.75 // 1.5x regular rate
+    },
+    overtimeThreshold: {
+      type: Number,
+      default: 8 // hours per day before overtime kicks in
+    },
+    payPeriod: {
+      type: String,
+      enum: ['weekly', 'biweekly', 'monthly'],
+      default: 'weekly'
+    },
+    currency: {
+      type: String,
+      default: 'GBP'
+    },
+    currencySymbol: {
+      type: String,
+      default: '£'
+    },
+    taxRate: {
+      type: Number,
+      default: 20 // 20% basic rate tax
+    },
+    nationalInsuranceRate: {
+      type: Number,
+      default: 12 // 12% National Insurance
+    },
+    pensionContribution: {
+      type: Number,
+      default: 5 // 5% pension contribution
+    }
+  },
+
   // Legal & Compliance
   legalSettings: {
     termsAndConditions: {

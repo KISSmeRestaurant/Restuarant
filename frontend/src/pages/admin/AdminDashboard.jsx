@@ -10,6 +10,7 @@ import Reservations from './Reservations';
 import Orders from './Orders';
 import StaffShifts from './StaffShifts';
 import TableManagementTab from './TableManagementTab';
+import TableAnalyticsTab from './TableAnalyticsTab';
 
 const AdminDashboard = () => {
   const [admin, setAdmin] = useState(null);
@@ -193,74 +194,83 @@ const fetchAdminData = async () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <Sidebar 
-        sidebarOpen={sidebarOpen} 
-        setSidebarOpen={setSidebarOpen} 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-      />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header activeTab={activeTab} admin={admin} />
+    <div className="fixed inset-0 flex bg-gray-100 z-40">
+      <div className="flex h-full w-full">
+        <Sidebar 
+          sidebarOpen={sidebarOpen} 
+          setSidebarOpen={setSidebarOpen} 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+        />
         
-        <main className="flex-1 overflow-y-auto p-6">
-  {error && (
-    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
-      <p>{error}</p>
-    </div>
-  )}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="h-16"></div> {/* Spacer for navbar */}
+          <Header activeTab={activeTab} admin={admin} />
+          
+          <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
+            {error && (
+              <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
+                <p>{error}</p>
+              </div>
+            )}
 
-  {activeTab === 'dashboard' && (
-    <DashboardTab admin={admin} foodItems={foodItems} />
-  )}
+            {activeTab === 'dashboard' && (
+              <DashboardTab admin={admin} foodItems={foodItems} />
+            )}
 
-  {activeTab === 'food' && (
-    <FoodManagementTab 
-      foodItems={foodItems} 
-      error={error}
-      setError={setError}
-      handleAddFood={handleAddFood}
-      handleDeleteFood={handleDeleteFood}
-      categories={categories}
-      setCategories={setCategories}
-    />
-  )}
+            {activeTab === 'food' && (
+              <FoodManagementTab 
+                foodItems={foodItems} 
+                error={error}
+                setError={setError}
+                handleAddFood={handleAddFood}
+                handleDeleteFood={handleDeleteFood}
+                categories={categories}
+                setCategories={setCategories}
+              />
+            )}
 
-  {activeTab === 'users' && (
-    <div className="mb-8">
-      <Users />
-    </div>
-  )}
-  
-  {activeTab === 'orders' && (
-  <div className="mb-8">
-    <Orders />
-  </div>
-)}
+            {activeTab === 'users' && (
+              <div className="mb-8">
+                <Users />
+              </div>
+            )}
+            
+            {activeTab === 'orders' && (
+              <div className="mb-8">
+                <Orders />
+              </div>
+            )}
 
-  {activeTab === 'reservations' && (
-    <div className="mb-8">
-      <Reservations />
-    </div>
-  )}
+            {activeTab === 'reservations' && (
+              <div className="mb-8">
+                <Reservations />
+              </div>
+            )}
 
-  {activeTab === 'staff-shifts' && (
-    <div className="mb-8">
-      <StaffShifts />
-    </div>
-  )}
+            {activeTab === 'staff-shifts' && (
+              <div className="mb-8">
+                <StaffShifts />
+              </div>
+            )}
 
-  {activeTab === 'tables' && (
-    <div className="mb-8">
-      <TableManagementTab />
-    </div>
-  )}
+            {activeTab === 'tables' && (
+              <div className="mb-8">
+                <TableManagementTab />
+              </div>
+            )}
 
-  {activeTab === 'settings' && (
-    <SettingsTab />
-  )}
-</main>
+            {activeTab === 'table-analytics' && (
+              <div className="mb-8">
+                <TableAnalyticsTab />
+              </div>
+            )}
+
+            {activeTab === 'settings' && (
+              <SettingsTab />
+            )}
+          </main>
+        </div>
       </div>
     </div>
   );

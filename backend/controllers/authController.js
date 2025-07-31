@@ -277,16 +277,37 @@ export const verifyEmail = async (req, res, next) => {
     next(err);
   }
 };
-export const logout = (req, res) => {
-  res.cookie('jwt', 'loggedout', {
-    expires: new Date(Date.now() + 10 * 1000), // Expires in 10 seconds
-    httpOnly: true
-  });
-  
-  res.status(200).json({ 
-    status: 'success',
-    message: 'Logged out successfully'
-  });
+export const logout = async (req, res) => {
+  try {
+    // If user is authenticated, set them offline
+    if (req.user) {
+      await User.findByIdAndUpdate(req.user._id, {
+        isOnline: false,
+        lastSeen: new Date()
+      });
+    }
+
+    res.cookie('jwt', 'loggedout', {
+      expires: new Date(Date.now() + 10 * 1000), // Expires in 10 seconds
+      httpOnly: true
+    });
+    
+    res.status(200).json({ 
+      status: 'success',
+      message: 'Logged out successfully'
+    });
+  } catch (err) {
+    // Even if updating online status fails, still log out
+    res.cookie('jwt', 'loggedout', {
+      expires: new Date(Date.now() + 10 * 1000),
+      httpOnly: true
+    });
+    
+    res.status(200).json({ 
+      status: 'success',
+      message: 'Logged out successfully'
+    });
+  }
 };
 
 const transporter = nodemailer.createTransport({

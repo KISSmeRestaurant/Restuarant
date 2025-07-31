@@ -29,7 +29,9 @@ const TableManagementTab = () => {
   const fetchTables = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('https://restuarant-sh57.onrender.com/api/admin/tables', {
+      // Try localhost first for testing, fallback to production
+      const baseUrl = 'http://localhost:5000/api';
+      const response = await fetch(`${baseUrl}/admin/tables`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -67,9 +69,10 @@ const TableManagementTab = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
+      const baseUrl = 'http://localhost:5000/api';
       const url = editingTable 
-        ? `https://restuarant-sh57.onrender.com/api/admin/tables/${editingTable._id}`
-        : 'https://restuarant-sh57.onrender.com/api/admin/tables';
+        ? `${baseUrl}/admin/tables/${editingTable._id}`
+        : `${baseUrl}/admin/tables`;
       
       const method = editingTable ? 'PATCH' : 'POST';
 
@@ -136,7 +139,8 @@ const TableManagementTab = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`https://restuarant-sh57.onrender.com/api/admin/tables/${tableId}`, {
+      const baseUrl = 'http://localhost:5000/api';
+      const response = await fetch(`${baseUrl}/admin/tables/${tableId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
