@@ -40,6 +40,12 @@ export const auth = async (req, res, next) => {
       });
     }
 
+    // 5) Update user online status and last seen
+    await User.findByIdAndUpdate(currentUser._id, {
+      isOnline: true,
+      lastSeen: new Date()
+    });
+
     // Grant access
     req.user = currentUser;
     next();

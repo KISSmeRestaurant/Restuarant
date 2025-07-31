@@ -4,12 +4,13 @@ import {
   getStaffDetails,
   getStaffOrders,
   updateOrderStatus,
-  getStaffReservations,  // This is the only import needed
+  getStaffReservations,
   updateReservationStatus,
   getCustomerFeedback,
   startShift,
   getActiveShift,
-  endShift
+  endShift,
+  getStaffShiftHistory
 } from '../controllers/staffController.js';
 
 const router = express.Router();
@@ -32,6 +33,6 @@ router.get('/feedback', staff, getCustomerFeedback);
 router.post('/shift/start', staff, startShift);
 router.post('/shift/end', staff, endShift);
 router.get('/shift/active', staff, getActiveShift);
-
+router.get('/shift/history', staff, getStaffShiftHistory);
 
 export default router;

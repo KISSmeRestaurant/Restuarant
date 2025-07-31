@@ -181,33 +181,44 @@ export const startShift = async (req, res) => {
     const staffId = req.user._id;
     
     // Check for existing active shift
-    const activeShift = await StaffShift.findOne({
-      staff: staffId,
-      endTime: null
-    });
+    const activeShift = await StaffShift.getActiveShift(staffId);
     
     if (activeShift) {
-      // Instead of returning error, return the existing shift
+      // Return the existing active shift
       return res.status(200).json({
         status: 'success',
         data: {
           shift: activeShift,
-          startTime: activeShift.startTime
+          startTime: activeShift.startTime,
+          message: 'Shift already active'
         }
       });
     }
     
+    // Get default hourly rate from settings
+    const Settings = (await import('../models/Settings.js')).default;
+    const settings = await Settings.getSettings();
+    const defaultHourlyRate = settings.salarySettings.defaultHourlyRate;
+    
     // Create new shift if none exists
     const shift = await StaffShift.create({
       staff: staffId,
-      startTime: new Date()
+      startTime: new Date(),
+      status: 'active',
+      salary: {
+        hourlyRate: defaultHourlyRate,
+        totalEarned: 0
+      }
     });
     
-    res.status(200).json({
+    const populatedShift = await StaffShift.findById(shift._id).populate('staff', 'firstName lastName email');
+    
+    res.status(201).json({
       status: 'success',
       data: {
-        shift,
-        startTime: shift.startTime
+        shift: populatedShift,
+        startTime: populatedShift.startTime,
+        message: 'Shift started successfully'
       }
     });
   } catch (err) {
@@ -223,18 +234,7 @@ export const endShift = async (req, res) => {
   try {
     const staffId = req.user._id;
     
-    const shift = await StaffShift.findOneAndUpdate(
-      {
-        staff: staffId,
-        endTime: null
-      },
-      {
-        endTime: new Date()
-      },
-      {
-        new: true
-      }
-    );
+    const shift = await StaffShift.endActiveShift(staffId);
     
     if (!shift) {
       return res.status(400).json({
@@ -245,7 +245,8 @@ export const endShift = async (req, res) => {
     
     res.status(200).json({
       status: 'success',
-      data: shift
+      data: shift,
+      message: 'Shift ended successfully'
     });
   } catch (err) {
     res.status(500).json({
@@ -254,14 +255,12 @@ export const endShift = async (req, res) => {
     });
   }
 };
+
 export const getActiveShift = async (req, res) => {
   try {
     const staffId = req.user._id;
     
-    const activeShift = await StaffShift.findOne({
-      staff: staffId,
-      endTime: null
-    }).sort({ startTime: -1 }); // Get the most recent shift
+    const activeShift = await StaffShift.getActiveShift(staffId);
     
     if (!activeShift) {
       return res.status(404).json({
@@ -270,12 +269,79 @@ export const getActiveShift = async (req, res) => {
       });
     }
     
+    // Add current duration and earnings for active shifts
+    const shiftData = {
+      ...activeShift.toObject(),
+      currentDuration: activeShift.getCurrentDuration(),
+      currentEarnings: activeShift.getCurrentEarnings()
+    };
+    
     res.status(200).json({
       status: 'success',
-      data: activeShift
+      data: shiftData
     });
   } catch (err) {
     console.error('Error in getActiveShift:', err);
+    res.status(500).json({
+      status: 'error',
+      message: err.message
+    });
+  }
+};
+
+export const getStaffShiftHistory = async (req, res) => {
+  try {
+    const staffId = req.user._id;
+    const { page = 1, limit = 10, startDate, endDate } = req.query;
+    
+    // Build filter
+    const filter = { staff: staffId };
+    if (startDate || endDate) {
+      filter.startTime = {};
+      if (startDate) filter.startTime.$gte = new Date(startDate);
+      if (endDate) filter.startTime.$lte = new Date(endDate);
+    }
+    
+    const shifts = await StaffShift.find(filter)
+      .sort({ startTime: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .populate('staff', 'firstName lastName email');
+    
+    const total = await StaffShift.countDocuments(filter);
+    
+    // Calculate totals
+    const totals = await StaffShift.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: null,
+          totalHours: { $sum: { $divide: ['$duration', 60] } },
+          totalEarnings: { $sum: '$salary.totalEarned' },
+          totalShifts: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        shifts,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          totalPages: Math.ceil(total / limit)
+        },
+        summary: totals[0] || {
+          totalHours: 0,
+          totalEarnings: 0,
+          totalShifts: 0
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Error in getStaffShiftHistory:', err);
     res.status(500).json({
       status: 'error',
       message: err.message

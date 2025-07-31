@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FaClock, FaUser, FaCalendarAlt, FaEdit, FaTrash, FaEye, FaFilter, FaDownload } from 'react-icons/fa';
+import { FaClock, FaUser, FaCalendarAlt, FaEdit, FaTrash, FaEye, FaFilter, FaDownload, FaMoneyBillWave } from 'react-icons/fa';
 import { MdAccessTime, MdPeople, MdTrendingUp } from 'react-icons/md';
 
 const StaffShifts = () => {
@@ -18,12 +18,40 @@ const StaffShifts = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedShift, setSelectedShift] = useState(null);
   const [staffList, setStaffList] = useState([]);
+  const [monthlyEarnings, setMonthlyEarnings] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+  });
 
   useEffect(() => {
     fetchStaffShifts();
     fetchStaffShiftStats();
     fetchStaffList();
   }, [filters]);
+
+  useEffect(() => {
+    fetchMonthlyEarnings();
+  }, [selectedMonth]);
+
+  const fetchMonthlyEarnings = async () => {
+    try {
+      const [year, month] = selectedMonth.split('-');
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/admin/staff-shifts/monthly-earnings/${year}/${month}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMonthlyEarnings(data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch monthly earnings:', err);
+    }
+  };
 
   const fetchStaffShifts = async () => {
     try {
@@ -143,14 +171,38 @@ const StaffShifts = () => {
   };
 
   const formatDuration = (minutes) => {
-    if (!minutes) return 'N/A';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
+    if (!minutes) return '00:00:00';
+    const totalSeconds = Math.floor(minutes * 60);
+    const hours = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const formatDateTime = (dateString) => {
     return new Date(dateString).toLocaleString();
+  };
+
+  const formatCurrency = (amount) => {
+    return `£${(amount || 0).toFixed(2)}`;
+  };
+
+  const getCurrentDuration = (shift) => {
+    // Only calculate current duration if shift is truly active (no endTime)
+    if (shift.status === 'active' && shift.startTime && !shift.endTime) {
+      const now = new Date();
+      const start = new Date(shift.startTime);
+      return (now - start) / (1000 * 60); // in minutes
+    }
+    return shift.duration || 0;
+  };
+
+  const getCurrentEarnings = (shift) => {
+    // Only show current earnings if shift is truly active (no endTime)
+    if (shift.status === 'active' && !shift.endTime) {
+      return shift.currentEarnings || 0;
+    }
+    return shift.salary?.totalEarned || 0;
   };
 
   const resetFilters = () => {
@@ -236,6 +288,129 @@ const StaffShifts = () => {
         </div>
       )}
 
+      {/* Monthly Earnings Section */}
+      {monthlyEarnings && (
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <FaMoneyBillWave className="text-green-600" />
+              <h3 className="text-lg font-semibold">Monthly Earnings - {monthlyEarnings.monthName} {monthlyEarnings.year}</h3>
+            </div>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
+
+          {/* Monthly Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-green-600">Total Earnings</p>
+                  <p className="text-xl font-bold text-green-800">{formatCurrency(monthlyEarnings.totals.totalEarnings)}</p>
+                </div>
+                <FaMoneyBillWave className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-600">Total Hours</p>
+                  <p className="text-xl font-bold text-blue-800">{monthlyEarnings.totals.totalHours}h</p>
+                </div>
+                <MdAccessTime className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-purple-600">Total Shifts</p>
+                  <p className="text-xl font-bold text-purple-800">{monthlyEarnings.totals.totalShifts}</p>
+                </div>
+                <FaClock className="h-6 w-6 text-purple-600" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-amber-50 to-amber-100 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-amber-600">Avg. Rate/Hour</p>
+                  <p className="text-xl font-bold text-amber-800">{formatCurrency(monthlyEarnings.totals.averageEarningsPerHour)}</p>
+                </div>
+                <MdTrendingUp className="h-6 w-6 text-amber-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Staff Earnings Table */}
+          {monthlyEarnings.staffEarnings.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Staff Member
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Total Earnings
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Hours Worked
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Shifts Completed
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Avg. Hourly Rate
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {monthlyEarnings.staffEarnings.map((staff, index) => (
+                    <tr key={staff._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <FaUser className="h-5 w-5 text-gray-400 mr-3" />
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{staff.staffName}</div>
+                            <div className="text-sm text-gray-500">{staff.staffEmail}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-bold text-green-600">
+                          {formatCurrency(staff.totalEarnings)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {staff.totalHours.toFixed(1)}h
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {staff.totalShifts}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatCurrency(staff.averageHourlyRate)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {monthlyEarnings.staffEarnings.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No earnings data found for {monthlyEarnings.monthName} {monthlyEarnings.year}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Filters */}
       <div className="bg-white p-6 rounded-lg shadow-md">
         <div className="flex items-center gap-4 mb-4">
@@ -309,6 +484,12 @@ const StaffShifts = () => {
                   Duration
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Hourly Rate
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Earnings
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -334,19 +515,56 @@ const StaffShifts = () => {
                     {formatDateTime(shift.startTime)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {shift.endTime ? formatDateTime(shift.endTime) : 'Ongoing'}
+                    {shift.endTime ? formatDateTime(shift.endTime) : (
+                      <span className="text-green-600 font-medium">Ongoing</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatDuration(shift.duration)}
+                    {shift.status === 'active' ? 
+                      formatDuration(getCurrentDuration(shift)) : 
+                      formatDuration(shift.duration)
+                    }
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {formatCurrency(shift.salary?.hourlyRate || 0)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {formatCurrency(getCurrentEarnings(shift))}
+                      </span>
+                      {shift.status === 'active' && (
+                        <span className="text-xs text-green-600">Live</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      shift.status === 'active' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {shift.status}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        shift.status === 'active' && shift.isReallyActive
+                          ? 'bg-green-100 text-green-800' 
+                          : shift.status === 'active' && !shift.isReallyActive
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {shift.status === 'active' && shift.isReallyActive 
+                          ? 'Active & Online' 
+                          : shift.status === 'active' && !shift.isReallyActive
+                          ? 'On Shift (Offline)'
+                          : 'Completed'
+                        }
+                      </span>
+                      {shift.status === 'active' && shift.staffOnlineStatus && (
+                        <span className="text-xs text-gray-500 mt-1">
+                          {shift.staffOnlineStatus.isRecentlyActive 
+                            ? 'Online now' 
+                            : shift.staffOnlineStatus.lastSeen 
+                            ? `Last seen: ${new Date(shift.staffOnlineStatus.lastSeen).toLocaleTimeString()}`
+                            : 'Never online'
+                          }
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">

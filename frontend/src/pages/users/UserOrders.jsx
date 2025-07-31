@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
+import { apiRequest } from '../../config/api.js';
 import { 
   FaSpinner, 
   FaCheckCircle, 
@@ -39,15 +39,11 @@ const UserOrders = () => {
     const fetchOrders = async () => {
       try {
         setError(null);
-        const token = localStorage.getItem('token');
-        const response = await axios.get('https://restuarant-sh57.onrender.com/api/orders/my-orders', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        setOrders(response.data);
+        const response = await apiRequest('/orders/my-orders');
+        const data = await response.json();
+        setOrders(data);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to fetch orders');
+        setError(err.message || 'Failed to fetch orders');
         console.error('Error fetching orders:', err);
       } finally {
         setLoading(false);
@@ -62,20 +58,14 @@ const UserOrders = () => {
     
     try {
       setError(null);
-      const token = localStorage.getItem('token');
-      await axios.put(`https://restuarant-sh57.onrender.com/api/orders/${orderId}/cancel`, 
-        {},
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      await apiRequest(`/orders/${orderId}/cancel`, {
+        method: 'PUT'
+      });
       setOrders(orders.map(order => 
         order._id === orderId ? { ...order, status: 'cancelled' } : order
       ));
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to cancel order');
+      setError(err.message || 'Failed to cancel order');
       console.error('Error cancelling order:', err);
     }
   };

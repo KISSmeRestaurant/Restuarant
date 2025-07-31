@@ -34,16 +34,42 @@ export const getAdminDetails = async (req, res, next) => {
   }
 };
 
+
 export const getAllUsers = async (req, res, next) => {
   try {
     const users = await User.find()
-      .select('-password -passwordResetToken -passwordResetExpires')
+      .select('-password -passwordResetToken -passwordResetExpires +active')
       .sort({ createdAt: -1 });
+    
+    // Add online status and staff shift status for staff members
+    const usersWithStatus = await Promise.all(users.map(async (user) => {
+      const userObj = user.toObject();
+      
+      // Add account active status (renamed for frontend compatibility)
+      userObj.isActive = userObj.active;
+      
+      // Check if user is online (last seen within 5 minutes)
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      userObj.isOnline = userObj.isOnline && userObj.lastSeen > fiveMinutesAgo;
+      
+      // For staff members, check if they have an active shift
+      if (user.role === 'staff') {
+        const activeShift = await StaffShift.findOne({
+          staff: user._id,
+          status: 'active',
+          endTime: null
+        });
+        userObj.hasActiveShift = !!activeShift;
+        userObj.currentShift = activeShift;
+      }
+      
+      return userObj;
+    }));
     
     res.status(200).json({
       status: 'success',
-      results: users.length,
-      data: users
+      results: usersWithStatus.length,
+      data: usersWithStatus
     });
   } catch (err) {
     next(err);
@@ -238,7 +264,17 @@ export const getAllStaffShifts = async (req, res, next) => {
     
     // Build filter object
     const filter = {};
-    if (status) filter.status = status;
+    if (status) {
+      if (status === 'active') {
+        // For active status, ensure status is 'active' AND endTime is null or undefined
+        filter.$and = [
+          { status: 'active' },
+          { $or: [{ endTime: null }, { endTime: { $exists: false } }] }
+        ];
+      } else {
+        filter.status = status;
+      }
+    }
     if (staffId) filter.staff = staffId;
     
     // Date range filter
@@ -254,6 +290,40 @@ export const getAllStaffShifts = async (req, res, next) => {
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
+    // Add current duration, earnings, and online status for shifts
+    const shiftsWithCurrentData = await Promise.all(shifts.map(async (shift) => {
+      const shiftObj = shift.toObject();
+      
+      // Add formatted duration
+      shiftObj.formattedDuration = shift.formatDurationHMS();
+      
+      if (shift.status === 'active' && !shift.endTime) {
+        shiftObj.currentDuration = shift.getCurrentDuration();
+        shiftObj.currentEarnings = shift.getCurrentEarnings();
+        
+        // Check if staff is actually online (within last 5 minutes)
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const staffUser = await User.findById(shift.staff._id);
+        const isStaffOnline = staffUser && staffUser.isOnline && staffUser.lastSeen > fiveMinutesAgo;
+        
+        // Only mark as truly active if staff is online
+        shiftObj.isReallyActive = isStaffOnline;
+        shiftObj.staffOnlineStatus = {
+          isOnline: staffUser?.isOnline || false,
+          lastSeen: staffUser?.lastSeen,
+          isRecentlyActive: isStaffOnline
+        };
+      } else {
+        shiftObj.isReallyActive = false;
+        shiftObj.staffOnlineStatus = {
+          isOnline: false,
+          lastSeen: null,
+          isRecentlyActive: false
+        };
+      }
+      return shiftObj;
+    }));
+
     const total = await StaffShift.countDocuments(filter);
 
     res.status(200).json({
@@ -262,7 +332,7 @@ export const getAllStaffShifts = async (req, res, next) => {
       total,
       page: parseInt(page),
       totalPages: Math.ceil(total / limit),
-      data: shifts
+      data: shiftsWithCurrentData
     });
   } catch (err) {
     next(err);
@@ -377,7 +447,18 @@ export const getStaffShiftStats = async (req, res, next) => {
           totalShifts: { $sum: 1 },
           totalHours: { $sum: { $divide: ['$duration', 60] } },
           activeShifts: {
-            $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] }
+            $sum: { 
+              $cond: [
+                { 
+                  $and: [
+                    { $eq: ['$status', 'active'] },
+                    { $eq: ['$endTime', null] }
+                  ]
+                }, 
+                1, 
+                0
+              ]
+            }
           },
           completedShifts: {
             $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
@@ -402,7 +483,18 @@ export const getStaffShiftStats = async (req, res, next) => {
           totalShifts: { $sum: 1 },
           totalHours: { $sum: { $divide: ['$duration', 60] } },
           activeShifts: {
-            $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] }
+            $sum: { 
+              $cond: [
+                { 
+                  $and: [
+                    { $eq: ['$status', 'active'] },
+                    { $eq: ['$endTime', null] }
+                  ]
+                }, 
+                1, 
+                0
+              ]
+            }
           },
           completedShifts: {
             $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
@@ -424,6 +516,57 @@ export const getStaffShiftStats = async (req, res, next) => {
           averageDuration: 0
         },
         byStaff: stats
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getMonthlyEarnings = async (req, res, next) => {
+  try {
+    const { year, month } = req.params;
+    
+    // Validate year and month
+    const yearNum = parseInt(year);
+    const monthNum = parseInt(month);
+    
+    if (isNaN(yearNum) || isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Invalid year or month provided'
+      });
+    }
+
+    // Get all staff monthly earnings
+    const monthlyEarnings = await StaffShift.getAllStaffMonthlyEarnings(yearNum, monthNum);
+    
+    // Calculate totals
+    const totals = monthlyEarnings.reduce((acc, staff) => {
+      acc.totalEarnings += staff.totalEarnings || 0;
+      acc.totalHours += staff.totalHours || 0;
+      acc.totalShifts += staff.totalShifts || 0;
+      return acc;
+    }, { totalEarnings: 0, totalHours: 0, totalShifts: 0 });
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        year: yearNum,
+        month: monthNum,
+        monthName: new Date(yearNum, monthNum - 1).toLocaleString('default', { month: 'long' }),
+        totals: {
+          totalEarnings: Math.round(totals.totalEarnings * 100) / 100,
+          totalHours: Math.round(totals.totalHours * 100) / 100,
+          totalShifts: totals.totalShifts,
+          averageEarningsPerHour: totals.totalHours > 0 ? Math.round((totals.totalEarnings / totals.totalHours) * 100) / 100 : 0
+        },
+        staffEarnings: monthlyEarnings.map(staff => ({
+          ...staff,
+          totalEarnings: Math.round(staff.totalEarnings * 100) / 100,
+          totalHours: Math.round(staff.totalHours * 100) / 100,
+          averageHourlyRate: Math.round(staff.averageHourlyRate * 100) / 100
+        }))
       }
     });
   } catch (err) {
@@ -638,6 +781,77 @@ export const calculateOrderTotals = async (req, res, next) => {
           serviceChargeEnabled: settings.paymentSettings.serviceCharge.enabled
         }
       }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateSalarySettings = async (req, res, next) => {
+  try {
+    const { 
+      defaultHourlyRate, 
+      overtimeRate, 
+      overtimeThreshold, 
+      payPeriod, 
+      currency, 
+      currencySymbol,
+      taxRate,
+      nationalInsuranceRate,
+      pensionContribution
+    } = req.body;
+    
+    const settings = await Settings.getSettings();
+    
+    if (defaultHourlyRate !== undefined) settings.salarySettings.defaultHourlyRate = defaultHourlyRate;
+    if (overtimeRate !== undefined) settings.salarySettings.overtimeRate = overtimeRate;
+    if (overtimeThreshold !== undefined) settings.salarySettings.overtimeThreshold = overtimeThreshold;
+    if (payPeriod) settings.salarySettings.payPeriod = payPeriod;
+    if (currency) settings.salarySettings.currency = currency;
+    if (currencySymbol) settings.salarySettings.currencySymbol = currencySymbol;
+    if (taxRate !== undefined) settings.salarySettings.taxRate = taxRate;
+    if (nationalInsuranceRate !== undefined) settings.salarySettings.nationalInsuranceRate = nationalInsuranceRate;
+    if (pensionContribution !== undefined) settings.salarySettings.pensionContribution = pensionContribution;
+    
+    await settings.save();
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Salary settings updated successfully',
+      data: settings.salarySettings
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateStaffSalaryRate = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { hourlyRate } = req.body;
+
+    if (!hourlyRate || hourlyRate < 0) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Valid hourly rate is required'
+      });
+    }
+
+    // Update all active shifts for this staff member
+    await StaffShift.updateMany(
+      { 
+        staff: id, 
+        status: 'active' 
+      },
+      { 
+        'salary.hourlyRate': hourlyRate 
+      }
+    );
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Staff hourly rate updated successfully',
+      data: { staffId: id, hourlyRate }
     });
   } catch (err) {
     next(err);
@@ -954,6 +1168,80 @@ export const getOrderAnalytics = async (req, res, next) => {
           revenue: Math.round(item.revenue * 100) / 100
         }))
       }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Get table orders with analytics (admin only)
+export const getTableOrders = async (req, res, next) => {
+  try {
+    const { date, tableId } = req.query;
+    
+    // Build query for orders
+    let query = {
+      orderType: 'dine-in'
+    };
+
+    // Filter by date if provided
+    if (date) {
+      const startDate = new Date(date);
+      const endDate = new Date(date);
+      endDate.setDate(endDate.getDate() + 1);
+      
+      query.createdAt = {
+        $gte: startDate,
+        $lt: endDate
+      };
+    }
+
+    // Filter by table if provided
+    if (tableId && tableId !== 'all') {
+      query.table = tableId;
+    }
+
+    // Fetch orders with populated table and food data
+    const orders = await Order.find(query)
+      .populate('table', 'tableNumber capacity location')
+      .populate('items.food', 'name price')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      status: 'success',
+      data: orders
+    });
+  } catch (error) {
+    console.error('Error fetching table orders:', error);
+    next(error);
+  }
+};
+
+// Update user online status
+export const updateUserOnlineStatus = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { isOnline } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { 
+        isOnline,
+        lastSeen: new Date()
+      },
+      { new: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'User not found'
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: user
     });
   } catch (err) {
     next(err);

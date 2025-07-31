@@ -8,13 +8,17 @@ import {
   MdEventNote,
   MdShoppingCart, // Add this for orders icon
   MdAccessTime, // Add this for staff shifts icon
-  MdTableRestaurant // Add this for table management icon
+  MdTableRestaurant, // Add this for table management icon
+  MdAnalytics // Add this for table analytics icon
 } from 'react-icons/md';
 import { FaUserCog } from 'react-icons/fa';
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen, activeTab, setActiveTab }) => {
   return (
     <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-gray-800 text-white transition-all duration-300 ease-in-out flex flex-col`}>
+      {/* Spacer for navbar */}
+      <div className="h-16"></div>
+      
       <div className="p-4 flex items-center justify-between">
         {sidebarOpen ? (
           <h1 className="text-xl font-bold">Admin Panel</h1>
@@ -86,6 +90,14 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, activeTab, setActiveTab }) => {
         >
           <MdTableRestaurant className="text-xl" />
           {sidebarOpen && <span className="ml-3">Table Management</span>}
+        </div>
+        
+        <div
+          className={`flex items-center px-4 py-3 cursor-pointer ${activeTab === 'table-analytics' ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
+          onClick={() => setActiveTab('table-analytics')}
+        >
+          <MdAnalytics className="text-xl" />
+          {sidebarOpen && <span className="ml-3">Table Analytics</span>}
         </div>
         
         <div

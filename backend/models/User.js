@@ -50,6 +50,21 @@ const UserSchema = new mongoose.Schema({
       message: props => `${props.value} is not a valid phone number!`
     }
   },
+  postcode: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return true; // Allow empty postcode
+        // More flexible UK postcode validation
+        // Handles formats like: SW1A 1AA, M1 1AA, B33 8TH, W1A 0AX, EC1A 1BB
+        const cleanPostcode = v.replace(/\s+/g, '').toUpperCase();
+        return /^[A-Z]{1,2}[0-9][A-Z0-9]?[0-9][A-Z]{2}$/.test(cleanPostcode);
+      },
+      message: props => `${props.value} is not a valid UK postcode format. Please use format like 'SW1A 1AA' or 'M1 1AA'`
+    }
+  },
   role: {
     type: String,
     enum: ['user', 'admin', 'staff'],
@@ -106,6 +121,14 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
     select: false
+  },
+  isOnline: {
+    type: Boolean,
+    default: false
+  },
+  lastSeen: {
+    type: Date,
+    default: Date.now
   },
   createdAt: {
     type: Date,

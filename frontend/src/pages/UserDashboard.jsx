@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-toastify';
+import { apiRequest } from '../config/api.js';
 import { 
   MdRestaurantMenu, 
   MdEventNote, 
@@ -41,6 +43,7 @@ const UserDashboard = () => {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
   const [editForm, setEditForm] = useState({
     firstName: '',
     lastName: '',
@@ -60,20 +63,12 @@ const UserDashboard = () => {
           return;
         }
 
-        const response = await fetch('https://restuarant-sh57.onrender.com/api/users/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await apiRequest('/users/me');
 
         if (response.status === 401) {
           localStorage.removeItem('token');
           navigate('/login');
           return;
-        }
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch user data');
         }
 
         const userData = await response.json();
@@ -87,11 +82,7 @@ const UserDashboard = () => {
 
         // Fetch user orders
         try {
-          const ordersResponse = await fetch('https://restuarant-sh57.onrender.com/api/orders/my-orders', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
+          const ordersResponse = await apiRequest('/orders/my-orders');
           if (ordersResponse.ok) {
             const ordersData = await ordersResponse.json();
             setOrders(ordersData.slice(0, 5)); // Get latest 5 orders
@@ -102,11 +93,7 @@ const UserDashboard = () => {
 
         // Fetch user reservations
         try {
-          const reservationsResponse = await fetch('https://restuarant-sh57.onrender.com/api/reservations/my-reservations', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
+          const reservationsResponse = await apiRequest('/reservations/my-reservations');
           if (reservationsResponse.ok) {
             const reservationsData = await reservationsResponse.json();
             setReservations(reservationsData.slice(0, 3)); // Get latest 3 reservations
@@ -127,26 +114,71 @@ const UserDashboard = () => {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    setEditLoading(true);
+    setError(''); // Clear any previous errors
+    
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://restuarant-sh57.onrender.com/api/users/me', {
+      const response = await apiRequest('/users/me', {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(editForm)
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to update profile');
+        // Handle different types of errors
+        if (data.message) {
+          throw new Error(data.message);
+        } else if (data.errors && Array.isArray(data.errors)) {
+          throw new Error(data.errors.join(', '));
+        } else {
+          throw new Error('Failed to update profile');
+        }
       }
 
-      const updatedUser = await response.json();
-      setUser(updatedUser);
+      // Update user state with the returned data
+      if (data.status === 'success' && data.data) {
+        setUser(data.data);
+        setEditForm({
+          firstName: data.data.firstName,
+          lastName: data.data.lastName,
+          phone: data.data.phone || '',
+          postcode: data.data.postcode || ''
+        });
+      } else {
+        // Fallback for different response format
+        setUser(data);
+        setEditForm({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone || '',
+          postcode: data.postcode || ''
+        });
+      }
+
       setShowEditModal(false);
+      toast.success('Profile updated successfully! 🎉', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+
     } catch (err) {
+      console.error('Profile update error:', err);
       setError(err.message);
+      toast.error(`Failed to update profile: ${err.message}`, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -338,7 +370,7 @@ const UserDashboard = () => {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-500">Loyalty Points</p>
-                    <p className="text-2xl font-bold text-gray-900">1,250</p>
+                    <p className="text-2xl font-bold text-gray-900">{orders.length * 50}</p>
                   </div>
                 </div>
               </motion.div>
@@ -353,7 +385,9 @@ const UserDashboard = () => {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-500">Member Status</p>
-                    <p className="text-lg font-bold text-amber-600">Gold</p>
+                    <p className="text-lg font-bold text-amber-600">
+                      {orders.length >= 10 ? 'Gold' : orders.length >= 5 ? 'Silver' : 'Bronze'}
+                    </p>
                   </div>
                 </div>
               </motion.div>
@@ -435,14 +469,24 @@ const UserDashboard = () => {
                 <div className="p-6">
                   {orders.length > 0 ? (
                     <div className="space-y-4">
-                      {orders.slice(0, 3).map((order, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      {orders.slice(0, 3).map((order) => (
+                        <div key={order._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div>
-                            <p className="font-medium text-gray-900">Order #{index + 1}</p>
-                            <p className="text-sm text-gray-600">2 items • £24.99</p>
+                            <p className="font-medium text-gray-900">
+                              Order #{order._id.slice(-6).toUpperCase()}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {order.items.length} items • ${order.totalAmount.toFixed(2)}
+                            </p>
                           </div>
-                          <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                            Delivered
+                          <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                            order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                            order.status === 'preparing' ? 'bg-blue-100 text-blue-800' :
+                            order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                           </span>
                         </div>
                       ))}
@@ -478,14 +522,27 @@ const UserDashboard = () => {
                 <div className="p-6">
                   {reservations.length > 0 ? (
                     <div className="space-y-4">
-                      {reservations.slice(0, 2).map((reservation, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      {reservations.slice(0, 2).map((reservation) => (
+                        <div key={reservation._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div>
-                            <p className="font-medium text-gray-900">Table for 4</p>
-                            <p className="text-sm text-gray-600">Dec 25, 2024 • 7:00 PM</p>
+                            <p className="font-medium text-gray-900">
+                              Table for {reservation.guests}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {new Date(reservation.date).toLocaleDateString('en-GB', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })} • {reservation.time}
+                            </p>
                           </div>
-                          <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                            Confirmed
+                          <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                            reservation.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                            reservation.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            reservation.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
+                            {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
                           </span>
                         </div>
                       ))}
@@ -523,23 +580,42 @@ const UserDashboard = () => {
             <div className="p-6">
               {orders.length > 0 ? (
                 <div className="space-y-4">
-                  {orders.map((order, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                  {orders.map((order) => (
+                    <div key={order._id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h4 className="font-semibold text-gray-900">Order #{index + 1}</h4>
-                          <p className="text-sm text-gray-600">Placed on Dec {20 + index}, 2024</p>
+                          <h4 className="font-semibold text-gray-900">
+                            Order #{order._id.slice(-6).toUpperCase()}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            Placed on {new Date(order.createdAt).toLocaleDateString('en-GB', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </p>
                         </div>
-                        <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                          Delivered
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                          order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                          order.status === 'preparing' ? 'bg-blue-100 text-blue-800' :
+                          order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <div>
-                          <p className="text-sm text-gray-600">2 items • Total: £{(24.99 + index * 5).toFixed(2)}</p>
+                          <p className="text-sm text-gray-600">
+                            {order.items.length} items • Total: ${order.totalAmount.toFixed(2)}
+                          </p>
                         </div>
                         <div className="flex space-x-2">
-                          <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                          <button 
+                            onClick={() => navigate(`/my-orders/${order._id}`)}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          >
                             View Details
                           </button>
                           <button className="text-green-600 hover:text-green-800 text-sm font-medium">
@@ -582,20 +658,35 @@ const UserDashboard = () => {
             <div className="p-6">
               {reservations.length > 0 ? (
                 <div className="space-y-4">
-                  {reservations.map((reservation, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                  {reservations.map((reservation) => (
+                    <div key={reservation._id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h4 className="font-semibold text-gray-900">Table for 4</h4>
-                          <p className="text-sm text-gray-600">Dec {25 + index}, 2024 at 7:00 PM</p>
+                          <h4 className="font-semibold text-gray-900">
+                            Table for {reservation.guests}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {new Date(reservation.date).toLocaleDateString('en-GB', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })} at {reservation.time}
+                          </p>
                         </div>
-                        <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                          Confirmed
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                          reservation.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                          reservation.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          reservation.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <div>
-                          <p className="text-sm text-gray-600">Special requests: Window seat</p>
+                          <p className="text-sm text-gray-600">
+                            Contact: {reservation.name} • {reservation.phone}
+                          </p>
                         </div>
                         <div className="flex space-x-2">
                           <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
@@ -796,12 +887,27 @@ const UserDashboard = () => {
                     Cancel
                   </motion.button>
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={{ scale: editLoading ? 1 : 1.02 }}
+                    whileTap={{ scale: editLoading ? 1 : 0.98 }}
                     type="submit"
-                    className="px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    disabled={editLoading}
+                    className={`px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                      editLoading 
+                        ? 'bg-blue-400 cursor-not-allowed' 
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
                   >
-                    Save Changes
+                    {editLoading ? (
+                      <div className="flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Saving...
+                      </div>
+                    ) : (
+                      'Save Changes'
+                    )}
                   </motion.button>
                 </div>
               </form>

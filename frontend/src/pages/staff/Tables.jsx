@@ -8,10 +8,17 @@ import {
   FaUtensils,
   FaShoppingCart,
   FaCheck,
-  FaClock
+  FaClock,
+  FaArrowLeft,
+  FaPrint
 } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import Header from './Header';
+import SearchBar from '../../components/common/SearchBar';
+import { apiRequest } from '../../config/api.js';
 
-const TablesTab = ({ darkMode }) => {
+const Tables = () => {
+  const navigate = useNavigate();
   const [tables, setTables] = useState([]);
   const [foodItems, setFoodItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,36 +29,71 @@ const TablesTab = ({ darkMode }) => {
   const [orderItems, setOrderItems] = useState([]);
   const [addMoreItems, setAddMoreItems] = useState([]);
   const [currentOrder, setCurrentOrder] = useState(null);
+  const [staffDetails, setStaffDetails] = useState(null);
   const [customerInfo, setCustomerInfo] = useState({
-    name: '',
-    phone: '',
     notes: ''
   });
+  const [filteredFoodItems, setFilteredFoodItems] = useState([]);
+
+  // Handle search results
+  const handleSearchResults = (results) => {
+    if (results === null) {
+      // No search query, show all items
+      setFilteredFoodItems(foodItems);
+    } else {
+      // Show filtered results
+      setFilteredFoodItems(results);
+    }
+  };
 
   // Fetch tables and food items
   useEffect(() => {
+    fetchStaffDetails();
     fetchTables();
     fetchFoodItems();
   }, []);
 
-  const fetchTables = async () => {
+  const fetchStaffDetails = async () => {
     try {
       const token = localStorage.getItem('token');
-      const baseUrl = 'http://localhost:5000/api';
-      const response = await fetch(`${baseUrl}/tables`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await apiRequest('/staff/me');
 
       if (!response.ok) {
-        throw new Error('Failed to fetch tables');
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/login');
+          return;
+        }
+        throw new Error('Failed to fetch staff details');
+      }
+
+      const data = await response.json();
+      setStaffDetails(data.data);
+    } catch (err) {
+      console.error('Error fetching staff details:', err);
+      setError('Failed to fetch staff details');
+    }
+  };
+
+  const fetchTables = async () => {
+    try {
+      const response = await apiRequest('/tables');
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch tables: ${response.status}`);
       }
 
       const data = await response.json();
       setTables(data.data || []);
+      setError(''); // Clear any previous errors
     } catch (err) {
+      console.error('Error fetching tables:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -60,13 +102,7 @@ const TablesTab = ({ darkMode }) => {
 
   const fetchFoodItems = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://restuarant-sh57.onrender.com/api/foods', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await apiRequest('/foods');
 
       if (!response.ok) {
         throw new Error('Failed to fetch food items');
@@ -74,8 +110,10 @@ const TablesTab = ({ darkMode }) => {
 
       const data = await response.json();
       setFoodItems(data || []);
+      setFilteredFoodItems(data || []);
     } catch (err) {
       console.error('Error fetching food items:', err);
+      setError('Failed to fetch food items');
     }
   };
 
@@ -88,7 +126,8 @@ const TablesTab = ({ darkMode }) => {
     setSelectedTable(table);
     setShowOrderModal(true);
     setOrderItems([]);
-    setCustomerInfo({ name: '', phone: '', notes: '' });
+    setCustomerInfo({ notes: '' });
+    setFilteredFoodItems(foodItems);
   };
 
   // Add item to order
@@ -141,14 +180,8 @@ const TablesTab = ({ darkMode }) => {
       return;
     }
 
-    if (!customerInfo.name.trim()) {
-      alert('Please enter customer name');
-      return;
-    }
 
     try {
-      const token = localStorage.getItem('token');
-      
       // Create order
       const orderData = {
         items: orderItems.map(item => ({
@@ -157,8 +190,6 @@ const TablesTab = ({ darkMode }) => {
           price: item.price
         })),
         deliveryInfo: {
-          name: customerInfo.name,
-          phone: customerInfo.phone,
           notes: customerInfo.notes,
           deliveryType: 'dine-in'
         },
@@ -167,12 +198,8 @@ const TablesTab = ({ darkMode }) => {
         totalAmount: calculateTotal()
       };
 
-      const response = await fetch('https://restuarant-sh57.onrender.com/api/orders', {
+      const response = await apiRequest('/orders', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(orderData)
       });
 
@@ -181,18 +208,22 @@ const TablesTab = ({ darkMode }) => {
         throw new Error(errorData.message || 'Failed to create order');
       }
 
-      const order = await response.json();
+      const orderResult = await response.json();
+      const orderId = orderResult.data?._id || orderResult._id;
+
+      if (!orderId) {
+        throw new Error('Order created but no ID returned');
+      }
 
       // Update table status
-      const baseUrl = 'http://localhost:5000/api';
-      await fetch(`${baseUrl}/tables/${selectedTable._id}/assign-order`, {
+      const assignResponse = await apiRequest(`/tables/${selectedTable._id}/assign-order`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ orderId: order._id })
+        body: JSON.stringify({ orderId })
       });
+
+      if (!assignResponse.ok) {
+        console.warn('Order created but failed to assign to table');
+      }
 
       // Refresh tables
       await fetchTables();
@@ -200,10 +231,14 @@ const TablesTab = ({ darkMode }) => {
       // Close modal
       setShowOrderModal(false);
       setSelectedTable(null);
+      setOrderItems([]);
+      setCustomerInfo({ notes: '' });
       
       alert('Order created successfully!');
     } catch (err) {
+      console.error('Error submitting order:', err);
       setError(err.message);
+      alert(`Failed to create order: ${err.message}`);
     }
   };
 
@@ -271,21 +306,14 @@ const TablesTab = ({ darkMode }) => {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const baseUrl = 'http://localhost:5000/api';
-      
       const itemsData = addMoreItems.map(item => ({
         food: item.food._id,
         quantity: item.quantity,
         price: item.price
       }));
 
-      const response = await fetch(`${baseUrl}/tables/${selectedTable._id}/add-items`, {
+      const response = await apiRequest(`/tables/${selectedTable._id}/add-items`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({ items: itemsData })
       });
 
@@ -306,20 +334,224 @@ const TablesTab = ({ darkMode }) => {
       alert('Items added to order successfully!');
     } catch (err) {
       setError(err.message);
+      alert(`Failed to add items: ${err.message}`);
     }
+  };
+
+  // Print bill for table
+  const handlePrintBill = async (table) => {
+    if (table.status !== 'occupied' || !table.currentOrder) {
+      alert('This table does not have an active order to print');
+      return;
+    }
+
+    try {
+      const response = await apiRequest(`/tables/${table._id}/bill`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch bill data');
+      }
+
+      const billData = await response.json();
+      
+      // Generate and print the bill
+      printBill(billData.data);
+      
+      // After printing, mark table for cleaning
+      await updateTableStatus(table._id, 'cleaning');
+      
+    } catch (err) {
+      console.error('Error printing bill:', err);
+      setError(err.message);
+      alert(`Failed to print bill: ${err.message}`);
+    }
+  };
+
+  // Generate printable bill content
+  const printBill = (billData) => {
+    const printWindow = window.open('', '_blank');
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Bill - Table ${billData.table.number}</title>
+        <style>
+          body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+            font-size: 12px;
+            line-height: 1.4;
+          }
+          .bill-container {
+            max-width: 300px;
+            margin: 0 auto;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+          }
+          .restaurant-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          .restaurant-info {
+            font-size: 10px;
+            margin-bottom: 2px;
+          }
+          .bill-info {
+            margin-bottom: 15px;
+          }
+          .bill-info div {
+            margin-bottom: 3px;
+          }
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+          }
+          .items-table th,
+          .items-table td {
+            text-align: left;
+            padding: 3px 0;
+            border-bottom: 1px dashed #ccc;
+          }
+          .items-table th {
+            font-weight: bold;
+            border-bottom: 1px solid #000;
+          }
+          .item-name {
+            width: 60%;
+          }
+          .item-qty {
+            width: 15%;
+            text-align: center;
+          }
+          .item-price {
+            width: 25%;
+            text-align: right;
+          }
+          .totals {
+            border-top: 2px solid #000;
+            padding-top: 10px;
+          }
+          .total-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+          }
+          .final-total {
+            font-weight: bold;
+            font-size: 14px;
+            border-top: 1px solid #000;
+            padding-top: 5px;
+            margin-top: 5px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px dashed #000;
+            font-size: 10px;
+          }
+          @media print {
+            body { margin: 0; padding: 10px; }
+            .bill-container { max-width: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="bill-container">
+          <div class="header">
+            <div class="restaurant-name">${billData.restaurant.name}</div>
+            <div class="restaurant-info">${billData.restaurant.address}</div>
+            <div class="restaurant-info">Tel: ${billData.restaurant.phone}</div>
+            <div class="restaurant-info">Email: ${billData.restaurant.email}</div>
+          </div>
+          
+          <div class="bill-info">
+            <div><strong>Order #:</strong> ${billData.order.orderNumber}</div>
+            <div><strong>Table:</strong> ${billData.table.number} (${billData.table.capacity} seats)</div>
+            <div><strong>Location:</strong> ${billData.table.location}</div>
+            <div><strong>Customer:</strong> ${billData.order.customer.name}</div>
+            ${billData.order.customer.phone ? `<div><strong>Phone:</strong> ${billData.order.customer.phone}</div>` : ''}
+            <div><strong>Date:</strong> ${new Date(billData.order.date).toLocaleString()}</div>
+            <div><strong>Served by:</strong> ${billData.printedBy}</div>
+          </div>
+
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th class="item-name">Item</th>
+                <th class="item-qty">Qty</th>
+                <th class="item-price">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${billData.order.items.map(item => `
+                <tr>
+                  <td class="item-name">${item.name}</td>
+                  <td class="item-qty">${item.quantity}</td>
+                  <td class="item-price">${billData.order.pricing.currencySymbol}${item.totalPrice.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <div class="total-line">
+              <span>Subtotal:</span>
+              <span>${billData.order.pricing.currencySymbol}${billData.order.pricing.subtotal.toFixed(2)}</span>
+            </div>
+            ${billData.order.pricing.serviceCharge > 0 ? `
+            <div class="total-line">
+              <span>Service Charge:</span>
+              <span>${billData.order.pricing.currencySymbol}${billData.order.pricing.serviceCharge.toFixed(2)}</span>
+            </div>
+            ` : ''}
+            <div class="total-line">
+              <span>VAT (${billData.order.pricing.vatRate}%):</span>
+              <span>${billData.order.pricing.currencySymbol}${billData.order.pricing.vatAmount.toFixed(2)}</span>
+            </div>
+            <div class="total-line final-total">
+              <span>TOTAL:</span>
+              <span>${billData.order.pricing.currencySymbol}${billData.order.pricing.totalAmount.toFixed(2)}</span>
+            </div>
+          </div>
+
+          ${billData.order.customer.notes ? `
+          <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #000;">
+            <strong>Notes:</strong> ${billData.order.customer.notes}
+          </div>
+          ` : ''}
+
+          <div class="footer">
+            <div>Thank you for dining with us!</div>
+            <div>Printed on: ${new Date(billData.printedAt).toLocaleString()}</div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Auto print after a short delay
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
   };
 
   // Update table status
   const updateTableStatus = async (tableId, status) => {
     try {
-      const token = localStorage.getItem('token');
-      const baseUrl = 'http://localhost:5000/api';
-      const response = await fetch(`${baseUrl}/tables/${tableId}/status`, {
+      const response = await apiRequest(`/tables/${tableId}/status`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({ status })
       });
 
@@ -328,7 +560,9 @@ const TablesTab = ({ darkMode }) => {
       }
 
       await fetchTables();
+      setError(''); // Clear any previous errors
     } catch (err) {
+      console.error('Error updating table status:', err);
       setError(err.message);
     }
   };
@@ -354,117 +588,192 @@ const TablesTab = ({ darkMode }) => {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header staffDetails={staffDetails} />
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={`rounded-xl shadow-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-      {/* Header */}
-      <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-        <h3 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-          Restaurant Tables
-          <span className="ml-2 text-sm font-normal text-gray-500">
-            ({tables.length} total tables)
-          </span>
-        </h3>
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="mx-6 mt-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded">
-          <p>{error}</p>
-        </div>
-      )}
-
-      {/* Tables Grid */}
-      <div className="p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {tables.map((table) => (
-            <motion.div
-              key={table._id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              whileHover={{ scale: 1.02 }}
-              className={`relative p-4 rounded-lg border-2 transition-all cursor-pointer ${getStatusColor(table.status)}`}
+    <div className="min-h-screen bg-gray-50">
+      <Header staffDetails={staffDetails} />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Page Header */}
+        <div className="mb-6">
+          <div className="flex items-center mb-4">
+            <button
+              onClick={() => navigate('/staff/dashboard')}
+              className="mr-4 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <div className="text-center">
-                <div className="flex justify-center mb-2">
-                  {getStatusIcon(table.status)}
+              <FaArrowLeft size={20} />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Restaurant Tables</h1>
+              <p className="text-gray-600">Manage table orders and status</p>
+            </div>
+          </div>
+          
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white p-4 rounded-lg shadow-sm border">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg mr-3">
+                  <FaCheck className="text-green-600" />
                 </div>
-                
-                <h4 className="font-semibold text-lg mb-1">
-                  Table {table.tableNumber}
-                </h4>
-                
-                <div className="flex items-center justify-center text-sm mb-2">
-                  <FaUsers className="mr-1" />
-                  <span>{table.capacity} seats</span>
-                </div>
-                
-                <div className="text-xs mb-3 capitalize">
-                  {table.location}
-                </div>
-                
-                <div className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(table.status)}`}>
-                  {table.status}
-                </div>
-
-                {/* Action Buttons */}
-                <div className="mt-3 space-y-1">
-                  {table.status === 'available' && (
-                    <button
-                      onClick={() => handleTakeOrder(table)}
-                      className="w-full bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors flex items-center justify-center"
-                    >
-                      <FaPlus className="mr-1" />
-                      Take Order
-                    </button>
-                  )}
-                  
-                  {table.status === 'occupied' && (
-                    <>
-                      <button
-                        onClick={() => handleAddMoreFood(table)}
-                        className="w-full bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors flex items-center justify-center"
-                      >
-                        <FaPlus className="mr-1" />
-                        Add More Food
-                      </button>
-                      <button
-                        onClick={() => updateTableStatus(table._id, 'cleaning')}
-                        className="w-full bg-yellow-600 text-white px-3 py-1 rounded text-xs hover:bg-yellow-700 transition-colors"
-                      >
-                        Mark for Cleaning
-                      </button>
-                    </>
-                  )}
-                  
-                  {table.status === 'cleaning' && (
-                    <button
-                      onClick={() => updateTableStatus(table._id, 'available')}
-                      className="w-full bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors"
-                    >
-                      Mark Available
-                    </button>
-                  )}
+                <div>
+                  <p className="text-sm text-gray-600">Available</p>
+                  <p className="text-2xl font-semibold text-green-600">
+                    {tables.filter(t => t.status === 'available').length}
+                  </p>
                 </div>
               </div>
-            </motion.div>
-          ))}
+            </div>
+            
+            <div className="bg-white p-4 rounded-lg shadow-sm border">
+              <div className="flex items-center">
+                <div className="p-2 bg-red-100 rounded-lg mr-3">
+                  <FaUtensils className="text-red-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Occupied</p>
+                  <p className="text-2xl font-semibold text-red-600">
+                    {tables.filter(t => t.status === 'occupied').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-4 rounded-lg shadow-sm border">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                  <FaTable className="text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Cleaning</p>
+                  <p className="text-2xl font-semibold text-blue-600">
+                    {tables.filter(t => t.status === 'cleaning').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-4 rounded-lg shadow-sm border">
+              <div className="flex items-center">
+                <div className="p-2 bg-gray-100 rounded-lg mr-3">
+                  <FaTable className="text-gray-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Total Tables</p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {tables.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Empty State */}
-        {tables.length === 0 && (
-          <div className="text-center py-12">
-            <FaTable className="mx-auto text-6xl text-gray-300 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">No Tables Available</h3>
-            <p className="text-gray-500">Contact admin to set up restaurant tables</p>
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded">
+            <p>{error}</p>
           </div>
         )}
+
+        {/* Tables Grid */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+              {tables.map((table) => (
+                <motion.div
+                  key={table._id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ scale: 1.02 }}
+                  className={`relative p-6 rounded-lg border-2 transition-all cursor-pointer ${getStatusColor(table.status)}`}
+                >
+                  <div className="text-center">
+                    <div className="flex justify-center mb-3">
+                      {getStatusIcon(table.status)}
+                    </div>
+                    
+                    <h4 className="font-semibold text-xl mb-2">
+                      Table {table.tableNumber}
+                    </h4>
+                    
+                    <div className="flex items-center justify-center text-sm mb-3">
+                      <FaUsers className="mr-2" />
+                      <span>{table.capacity} seats</span>
+                    </div>
+                    
+                    <div className="text-sm mb-4 capitalize font-medium">
+                      {table.location}
+                    </div>
+                    
+                    <div className={`text-sm font-medium px-3 py-1 rounded-full mb-4 ${getStatusColor(table.status)}`}>
+                      {table.status}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="space-y-2">
+                      {table.status === 'available' && (
+                        <button
+                          onClick={() => handleTakeOrder(table)}
+                          className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center justify-center"
+                        >
+                          <FaPlus className="mr-2" />
+                          Take Order
+                        </button>
+                      )}
+                      
+                      {table.status === 'occupied' && (
+                        <>
+                          <button
+                            onClick={() => handleAddMoreFood(table)}
+                            className="w-full bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors flex items-center justify-center"
+                          >
+                            <FaPlus className="mr-2" />
+                            Add More Food
+                          </button>
+                          <button
+                            onClick={() => handlePrintBill(table)}
+                            className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition-colors flex items-center justify-center"
+                          >
+                            <FaPrint className="mr-2" />
+                            Print Bill
+                          </button>
+                        </>
+                      )}
+                      
+                      {table.status === 'cleaning' && (
+                        <button
+                          onClick={() => updateTableStatus(table._id, 'available')}
+                          className="w-full bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors"
+                        >
+                          Mark Available
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Empty State */}
+            {tables.length === 0 && (
+              <div className="text-center py-12">
+                <FaTable className="mx-auto text-6xl text-gray-300 mb-4" />
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">No Tables Available</h3>
+                <p className="text-gray-500">Contact admin to set up restaurant tables</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Order Modal */}
@@ -499,8 +808,17 @@ const TablesTab = ({ darkMode }) => {
                 {/* Food Items */}
                 <div className="flex-1 p-6 overflow-y-auto border-r">
                   <h4 className="font-semibold mb-4">Menu Items</h4>
+                  
+                  {/* Search Bar */}
+                  <div className="mb-4">
+                    <SearchBar 
+                      allItems={foodItems} 
+                      onSearchResults={handleSearchResults}
+                    />
+                  </div>
+                  
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {foodItems.map((item) => (
+                    {filteredFoodItems.map((item) => (
                       <div
                         key={item._id}
                         className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
@@ -525,20 +843,6 @@ const TablesTab = ({ darkMode }) => {
                   
                   {/* Customer Info */}
                   <div className="mb-4 space-y-2">
-                    <input
-                      type="text"
-                      placeholder="Customer Name *"
-                      value={customerInfo.name}
-                      onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
-                      className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Phone Number"
-                      value={customerInfo.phone}
-                      onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
-                      className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
                     <textarea
                       placeholder="Special Notes"
                       value={customerInfo.notes}
@@ -733,4 +1037,4 @@ const TablesTab = ({ darkMode }) => {
   );
 };
 
-export default TablesTab;
+export default Tables;
