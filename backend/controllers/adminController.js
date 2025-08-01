@@ -88,9 +88,18 @@ export const updateUserRole = async (req, res, next) => {
       });
     }
 
+    // Set default permissions for staff role
+    const updateData = { role };
+    if (role === 'staff') {
+      updateData.permissions = {
+        tableAccess: true,
+        dashboardAccess: true
+      };
+    }
+
     const user = await User.findByIdAndUpdate(
       id,
-      { role },
+      updateData,
       { new: true, runValidators: true }
     ).select('-password');
 
@@ -104,6 +113,55 @@ export const updateUserRole = async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       data: user
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateStaffPermissions = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { tableAccess, dashboardAccess } = req.body;
+
+    // Find the user and check if they are staff
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'User not found'
+      });
+    }
+
+    if (user.role !== 'staff') {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Permissions can only be updated for staff members'
+      });
+    }
+
+    // Validate that at least one permission is granted
+    if (!tableAccess && !dashboardAccess) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Staff must have at least one permission (table or dashboard access)'
+      });
+    }
+
+    // Update permissions
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      {
+        'permissions.tableAccess': tableAccess,
+        'permissions.dashboardAccess': dashboardAccess
+      },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Staff permissions updated successfully',
+      data: updatedUser
     });
   } catch (err) {
     next(err);
