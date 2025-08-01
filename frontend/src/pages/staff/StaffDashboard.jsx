@@ -18,7 +18,6 @@ import OrdersTab from './OrdersTab';
 import ReservationsTab from './ReservationsTab';
 import KitchenTab from './KitchenTab';
 import FeedbackTab from './FeedbackTab';
-import TablesTab from './TablesTab';
 
 const StaffDashboard = () => {
   const [orders, setOrders] = useState([]);
