@@ -19,6 +19,10 @@ export const getStaffDetails = async (req, res) => {
         email: staff.email,
         role: staff.role,
         phone: staff.phone,
+        permissions: staff.permissions || {
+          tableAccess: true,
+          dashboardAccess: true
+        },
         createdAt: staff.createdAt
       }
     });

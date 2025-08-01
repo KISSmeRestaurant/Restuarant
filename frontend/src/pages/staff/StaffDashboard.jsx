@@ -18,6 +18,7 @@ import OrdersTab from './OrdersTab';
 import ReservationsTab from './ReservationsTab';
 import KitchenTab from './KitchenTab';
 import FeedbackTab from './FeedbackTab';
+import TablesTab from './TablesTab';
 
 const StaffDashboard = () => {
   const [orders, setOrders] = useState([]);
@@ -282,12 +283,12 @@ const StaffDashboard = () => {
   // Set default tab based on permissions
   useEffect(() => {
     if (staffDetails && !activeTab) {
-      const permissions = staffDetails.permissions;
+      const permissions = staffDetails.permissions || { tableAccess: true, dashboardAccess: true };
       
       // Set default tab based on available permissions
-      if (permissions?.dashboardAccess) {
+      if (permissions.dashboardAccess) {
         setActiveTab('kitchen');
-      } else if (permissions?.tableAccess) {
+      } else if (permissions.tableAccess) {
         setActiveTab('orders');
       } else {
         // Fallback to feedback if no specific permissions
@@ -527,9 +528,6 @@ const StaffDashboard = () => {
           />
         )}
 
-        {activeTab === 'tables' && (
-          <TablesTab />
-        )}
 
         {activeTab === 'feedback' && (
           <FeedbackTab 
