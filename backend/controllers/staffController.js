@@ -3,6 +3,8 @@ import Order from '../models/Order.js';
 import Reservation from '../models/Reservation.js';
 import Feedback from '../models/Feedback.js';
 import StaffShift from '../models/StaffShift.js';
+import User from '../models/User.js';
+import bcrypt from 'bcryptjs';
 
 export const getStaffDetails = async (req, res) => {
   try {
@@ -342,6 +344,123 @@ export const getStaffShiftHistory = async (req, res) => {
     });
   } catch (err) {
     console.error('Error in getStaffShiftHistory:', err);
+    res.status(500).json({
+      status: 'error',
+      message: err.message
+    });
+  }
+};
+
+export const updateStaffProfile = async (req, res) => {
+  try {
+    const staffId = req.user._id;
+    const { firstName, lastName, email, phone } = req.body;
+
+    // Check if email is already taken by another user
+    if (email && email !== req.user.email) {
+      const existingUser = await User.findOne({ 
+        email, 
+        _id: { $ne: staffId } 
+      });
+      
+      if (existingUser) {
+        return res.status(400).json({
+          status: 'fail',
+          message: 'Email is already taken by another user'
+        });
+      }
+    }
+
+    // Update staff profile
+    const updatedStaff = await User.findByIdAndUpdate(
+      staffId,
+      {
+        firstName,
+        lastName,
+        email,
+        phone
+      },
+      { 
+        new: true, 
+        runValidators: true,
+        select: '-password'
+      }
+    );
+
+    if (!updatedStaff) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'Staff member not found'
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: updatedStaff
+    });
+  } catch (err) {
+    console.error('Error updating staff profile:', err);
+    res.status(500).json({
+      status: 'error',
+      message: err.message
+    });
+  }
+};
+
+export const changeStaffPassword = async (req, res) => {
+  try {
+    const staffId = req.user._id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Current password and new password are required'
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'New password must be at least 6 characters long'
+      });
+    }
+
+    // Get staff with password
+    const staff = await User.findById(staffId).select('+password');
+    
+    if (!staff) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'Staff member not found'
+      });
+    }
+
+    // Check current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, staff.password);
+    
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Hash new password
+    const saltRounds = 12;
+    const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password
+    await User.findByIdAndUpdate(staffId, {
+      password: hashedNewPassword
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Password changed successfully'
+    });
+  } catch (err) {
+    console.error('Error changing staff password:', err);
     res.status(500).json({
       status: 'error',
       message: err.message

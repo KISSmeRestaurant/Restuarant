@@ -157,14 +157,25 @@ const Navbar = ({ isHomePage }) => {
                     {/* Menu Items */}
                     <div className="py-2">
                       {user.role === 'staff' && (
-                        <Link
-                          to="/staff/dashboard"
-                          className="flex items-center px-4 py-3 text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          <MdDashboard className="mr-3 text-lg" />
-                          <span className="font-medium">Staff Dashboard</span>
-                        </Link>
+                        <>
+                          <Link
+                            to="/staff/dashboard"
+                            className="flex items-center px-4 py-3 text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                            onClick={() => setIsProfileOpen(false)}
+                          >
+                            <MdDashboard className="mr-3 text-lg" />
+                            <span className="font-medium">Staff Dashboard</span>
+                          </Link>
+                          
+                          <Link
+                            to="/staff/settings"
+                            className="flex items-center px-4 py-3 text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                            onClick={() => setIsProfileOpen(false)}
+                          >
+                            <MdSettings className="mr-3 text-lg" />
+                            <span className="font-medium">Settings</span>
+                          </Link>
+                        </>
                       )}
                       
                       {user.role === 'admin' && (
@@ -285,14 +296,24 @@ const Navbar = ({ isHomePage }) => {
                     Admin Dashboard
                   </Link>
                 ) : user.role === 'staff' ? (
-                  <Link 
-                    to="/staff/dashboard" 
-                    className="flex items-center px-3 py-2 hover:bg-amber-600/50 rounded transition"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <MdDashboard className="mr-2" />
-                    Staff Dashboard
-                  </Link>
+                  <>
+                    <Link 
+                      to="/staff/dashboard" 
+                      className="flex items-center px-3 py-2 hover:bg-amber-600/50 rounded transition"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <MdDashboard className="mr-2" />
+                      Staff Dashboard
+                    </Link>
+                    <Link 
+                      to="/staff/settings" 
+                      className="flex items-center px-3 py-2 hover:bg-amber-600/50 rounded transition"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <MdSettings className="mr-2" />
+                      Settings
+                    </Link>
+                  </>
                 ) : (
                   <>
                     <Link 

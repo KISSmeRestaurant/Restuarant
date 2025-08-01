@@ -70,6 +70,20 @@ const UserSchema = new mongoose.Schema({
     enum: ['user', 'admin', 'staff'],
     default: 'user'
   },
+  permissions: {
+    tableAccess: {
+      type: Boolean,
+      default: function() {
+        return this.role === 'staff' ? true : false;
+      }
+    },
+    dashboardAccess: {
+      type: Boolean,
+      default: function() {
+        return this.role === 'staff' ? true : false;
+      }
+    }
+  },
   emailVerified: {
     type: Boolean,
     default: false

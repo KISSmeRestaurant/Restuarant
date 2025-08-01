@@ -4,6 +4,7 @@ import {
   getAdminDetails,
   getAllUsers,
   updateUserRole,
+  updateStaffPermissions,
   deleteUser,
   updateUserOnlineStatus,
   getAllStaffShifts,
@@ -37,6 +38,7 @@ const router = express.Router();
 router.get('/me', admin, getAdminDetails);
 router.get('/users', admin, getAllUsers);
 router.patch('/users/:id/role', admin, updateUserRole);
+router.patch('/staff/:id/permissions', admin, updateStaffPermissions);
 router.patch('/users/:userId/online-status', admin, updateUserOnlineStatus);
 router.delete('/users/:id', admin, deleteUser);
 

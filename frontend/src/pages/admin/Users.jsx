@@ -145,6 +145,39 @@ const AdminUsers = () => {
     }
   };
 
+  // Update staff permissions
+  const updateStaffPermissions = async (userId, permissions) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://restuarant-sh57.onrender.com/api/admin/staff/${userId}/permissions`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(permissions)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update staff permissions');
+      }
+
+      // Update the local state to reflect the change
+      setUsers(users.map(user => 
+        user._id === userId ? { ...user, permissions } : user
+      ));
+      
+      const enabledPermissions = [];
+      if (permissions.tableAccess) enabledPermissions.push('Tables');
+      if (permissions.dashboardAccess) enabledPermissions.push('Kitchen');
+      
+      toast.success(`Staff permissions updated: ${enabledPermissions.join(', ')}`);
+    } catch (err) {
+      setError(err.message);
+      toast.error(`Error updating permissions: ${err.message}`);
+    }
+  };
+
 const deleteUser = async () => {
   if (!userToDelete) return;
   
@@ -342,28 +375,66 @@ const deleteUser = async () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {editingUserId === user._id ? (
-                      <select
-                        value={user.role}
-                        onChange={(e) => updateUserRole(user._id, e.target.value)}
-                        className="border rounded p-1 text-sm focus:ring-2 focus:ring-indigo-500"
-                      >
-                        <option value="user">User</option>
-                        <option value="staff">Staff</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    ) : (
-                      <span className={`px-2 inline-flex items-center text-xs leading-5 font-semibold rounded-full ${
-                        user.role === 'admin' 
-                          ? 'bg-purple-100 text-purple-800' 
-                          : user.role === 'staff'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {getRoleIcon(user.role)}
-                        <span className="ml-1">{user.role}</span>
-                      </span>
-                    )}
+                    <div className="space-y-2">
+                      {editingUserId === user._id ? (
+                        <select
+                          value={user.role}
+                          onChange={(e) => updateUserRole(user._id, e.target.value)}
+                          className="border rounded p-1 text-sm focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="user">User</option>
+                          <option value="staff">Staff</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      ) : (
+                        <span className={`px-2 inline-flex items-center text-xs leading-5 font-semibold rounded-full ${
+                          user.role === 'admin' 
+                            ? 'bg-purple-100 text-purple-800' 
+                            : user.role === 'staff'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {getRoleIcon(user.role)}
+                          <span className="ml-1">{user.role}</span>
+                        </span>
+                      )}
+                      
+                      {/* Staff Permissions */}
+                      {user.role === 'staff' && (
+                        <div className="flex flex-col space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`table-${user._id}`}
+                              checked={user.permissions?.tableAccess || false}
+                              onChange={(e) => updateStaffPermissions(user._id, {
+                                tableAccess: e.target.checked,
+                                dashboardAccess: user.permissions?.dashboardAccess || false
+                              })}
+                              className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor={`table-${user._id}`} className="text-xs text-gray-600">
+                              Tables
+                            </label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`dashboard-${user._id}`}
+                              checked={user.permissions?.dashboardAccess || false}
+                              onChange={(e) => updateStaffPermissions(user._id, {
+                                tableAccess: user.permissions?.tableAccess || false,
+                                dashboardAccess: e.target.checked
+                              })}
+                              className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor={`dashboard-${user._id}`} className="text-xs text-gray-600">
+                              Kitchen
+                            </label>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-500 flex items-center">

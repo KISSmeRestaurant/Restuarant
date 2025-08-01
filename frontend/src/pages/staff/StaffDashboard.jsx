@@ -26,7 +26,7 @@ const StaffDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [staffDetails, setStaffDetails] = useState(null);
-  const [activeTab, setActiveTab] = useState('orders');
+  const [activeTab, setActiveTab] = useState('');
   const [shiftStatus, setShiftStatus] = useState('notStarted');
   const [shiftStartTime, setShiftStartTime] = useState(null);
   const [shiftDuration, setShiftDuration] = useState('00:00:00');
@@ -279,6 +279,23 @@ const StaffDashboard = () => {
     return () => clearInterval(interval);
   }, [shiftStatus, shiftStartTime]);
 
+  // Set default tab based on permissions
+  useEffect(() => {
+    if (staffDetails && !activeTab) {
+      const permissions = staffDetails.permissions;
+      
+      // Set default tab based on available permissions
+      if (permissions?.dashboardAccess) {
+        setActiveTab('kitchen');
+      } else if (permissions?.tableAccess) {
+        setActiveTab('orders');
+      } else {
+        // Fallback to feedback if no specific permissions
+        setActiveTab('feedback');
+      }
+    }
+  }, [staffDetails, activeTab]);
+
   // Initial data fetching
   useEffect(() => {
     const fetchData = async () => {
@@ -409,50 +426,59 @@ const StaffDashboard = () => {
       <div className="sticky top-16 z-10 bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex overflow-x-auto">
-            <button
-              onClick={() => setActiveTab('orders')}
-              className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'orders' ? 
-                'border-b-2 border-blue-500 text-blue-600' : 
-                'text-gray-500 hover:text-gray-700'}`}
-            >
-              <div className="flex items-center">
-                <FaUtensils className="mr-2 text-lg" /> Orders
-                {orders.filter(o => o.status === 'pending').length > 0 && (
-                  <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                    {orders.filter(o => o.status === 'pending').length}
-                  </span>
-                )}
-              </div>
-            </button>
+            {/* Orders Tab - Show if staff has table access or dashboard access */}
+            {(staffDetails?.permissions?.tableAccess || staffDetails?.permissions?.dashboardAccess) && (
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'orders' ? 
+                  'border-b-2 border-blue-500 text-blue-600' : 
+                  'text-gray-500 hover:text-gray-700'}`}
+              >
+                <div className="flex items-center">
+                  <FaUtensils className="mr-2 text-lg" /> Orders
+                  {orders.filter(o => o.status === 'pending').length > 0 && (
+                    <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      {orders.filter(o => o.status === 'pending').length}
+                    </span>
+                  )}
+                </div>
+              </button>
+            )}
             
-            <button
-              onClick={() => setActiveTab('reservations')}
-              className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'reservations' ? 
-                'border-b-2 border-green-500 text-green-600' : 
-                'text-gray-500 hover:text-gray-700'}`}
-            >
-              <div className="flex items-center">
-                <FaTable className="mr-2 text-lg" /> Reservations
-                {reservations.filter(r => r.status === 'pending').length > 0 && (
-                  <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                    {reservations.filter(r => r.status === 'pending').length}
-                  </span>
-                )}
-              </div>
-            </button>
+            {/* Reservations Tab - Show if staff has table access */}
+            {staffDetails?.permissions?.tableAccess && (
+              <button
+                onClick={() => setActiveTab('reservations')}
+                className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'reservations' ? 
+                  'border-b-2 border-green-500 text-green-600' : 
+                  'text-gray-500 hover:text-gray-700'}`}
+              >
+                <div className="flex items-center">
+                  <FaTable className="mr-2 text-lg" /> Reservations
+                  {reservations.filter(r => r.status === 'pending').length > 0 && (
+                    <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      {reservations.filter(r => r.status === 'pending').length}
+                    </span>
+                  )}
+                </div>
+              </button>
+            )}
             
-            <button
-              onClick={() => setActiveTab('kitchen')}
-              className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'kitchen' ? 
-                'border-b-2 border-yellow-500 text-yellow-600' : 
-                'text-gray-500 hover:text-gray-700'}`}
-            >
-              <div className="flex items-center">
-                <MdKitchen className="mr-2 text-lg" /> Kitchen
-              </div>
-            </button>
+            {/* Kitchen Tab - Show only if staff has dashboard access */}
+            {staffDetails?.permissions?.dashboardAccess && (
+              <button
+                onClick={() => setActiveTab('kitchen')}
+                className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'kitchen' ? 
+                  'border-b-2 border-yellow-500 text-yellow-600' : 
+                  'text-gray-500 hover:text-gray-700'}`}
+              >
+                <div className="flex items-center">
+                  <MdKitchen className="mr-2 text-lg" /> Kitchen
+                </div>
+              </button>
+            )}
             
-            
+            {/* Feedback Tab - Always show */}
             <button
               onClick={() => setActiveTab('feedback')}
               className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'feedback' ? 
