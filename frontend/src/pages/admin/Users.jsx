@@ -151,6 +151,13 @@ const AdminUsers = () => {
   const updateStaffPermissions = async (userId, permissions) => {
     try {
       const token = localStorage.getItem('token');
+      console.log('Updating permissions for user:', userId, 'with permissions:', permissions);
+      
+      // Validate that at least one permission is enabled
+      if (!permissions.tableAccess && !permissions.dashboardAccess) {
+        toast.error('Staff must have at least one permission enabled');
+        return;
+      }
       
       // First try the dedicated permissions endpoint
       let response = await fetch(`https://restuarant-sh57.onrender.com/api/admin/staff/${userId}/permissions`, {
@@ -162,8 +169,11 @@ const AdminUsers = () => {
         body: JSON.stringify(permissions)
       });
 
+      console.log('First API response status:', response.status);
+
       // If 404, fallback to using the role endpoint with permissions
       if (response.status === 404) {
+        console.log('Trying fallback endpoint...');
         response = await fetch(`https://restuarant-sh57.onrender.com/api/admin/users/${userId}/role`, {
           method: 'PATCH',
           headers: {
@@ -175,18 +185,34 @@ const AdminUsers = () => {
             permissions: permissions
           })
         });
+        console.log('Fallback API response status:', response.status);
       }
 
       if (!response.ok) {
-        throw new Error('Failed to update staff permissions');
+        const errorText = await response.text();
+        console.error('API Error:', errorText);
+        throw new Error(`Failed to update staff permissions: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('API Response data:', data);
+
+      // Ensure we have the updated user data
+      if (!data.data) {
+        throw new Error('Invalid response format from server');
+      }
 
       // Update the local state to reflect the change
-      setUsers(users.map(user => 
-        user._id === userId ? { ...user, ...data.data } : user
-      ));
+      const updatedUsers = users.map(user => {
+        if (user._id === userId) {
+          const updatedUser = { ...user, ...data.data };
+          console.log('Updated user:', updatedUser);
+          return updatedUser;
+        }
+        return user;
+      });
+      
+      setUsers(updatedUsers);
       
       const enabledPermissions = [];
       if (permissions.tableAccess) enabledPermissions.push('Tables');
@@ -194,8 +220,28 @@ const AdminUsers = () => {
       
       toast.success(`Staff permissions updated: ${enabledPermissions.join(', ')}`);
     } catch (err) {
+      console.error('Permission update error:', err);
       setError(err.message);
       toast.error(`Error updating permissions: ${err.message}`);
+      
+      // Revert the checkbox state by refetching users
+      const fetchUsers = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch('https://restuarant-sh57.onrender.com/api/admin/users', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setUsers(data.data);
+          }
+        } catch (fetchErr) {
+          console.error('Error refetching users:', fetchErr);
+        }
+      };
+      fetchUsers();
     }
   };
 
