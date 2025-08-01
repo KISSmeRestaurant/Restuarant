@@ -73,11 +73,11 @@ const UserSchema = new mongoose.Schema({
   permissions: {
     tableAccess: {
       type: Boolean,
-      default: true
+      default: false
     },
     dashboardAccess: {
       type: Boolean,
-      default: true
+      default: false
     }
   },
   emailVerified: {
