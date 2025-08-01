@@ -73,15 +73,11 @@ const UserSchema = new mongoose.Schema({
   permissions: {
     tableAccess: {
       type: Boolean,
-      default: function() {
-        return this.role === 'staff' ? true : false;
-      }
+      default: true
     },
     dashboardAccess: {
       type: Boolean,
-      default: function() {
-        return this.role === 'staff' ? true : false;
-      }
+      default: true
     }
   },
   emailVerified: {
