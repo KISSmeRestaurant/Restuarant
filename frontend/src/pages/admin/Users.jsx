@@ -132,9 +132,11 @@ const AdminUsers = () => {
         throw new Error('Failed to update user role');
       }
 
+      const data = await response.json();
+      
       // Update the local state to reflect the change
       setUsers(users.map(user => 
-        user._id === userId ? { ...user, role: newRole } : user
+        user._id === userId ? { ...user, ...data.data } : user
       ));
       
       toast.success(`User role updated to ${newRole}`);
@@ -149,7 +151,9 @@ const AdminUsers = () => {
   const updateStaffPermissions = async (userId, permissions) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`https://restuarant-sh57.onrender.com/api/admin/staff/${userId}/permissions`, {
+      
+      // First try the dedicated permissions endpoint
+      let response = await fetch(`https://restuarant-sh57.onrender.com/api/admin/staff/${userId}/permissions`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -158,13 +162,30 @@ const AdminUsers = () => {
         body: JSON.stringify(permissions)
       });
 
+      // If 404, fallback to using the role endpoint with permissions
+      if (response.status === 404) {
+        response = await fetch(`https://restuarant-sh57.onrender.com/api/admin/users/${userId}/role`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            role: 'staff',
+            permissions: permissions
+          })
+        });
+      }
+
       if (!response.ok) {
         throw new Error('Failed to update staff permissions');
       }
 
+      const data = await response.json();
+
       // Update the local state to reflect the change
       setUsers(users.map(user => 
-        user._id === userId ? { ...user, permissions } : user
+        user._id === userId ? { ...user, ...data.data } : user
       ));
       
       const enabledPermissions = [];
