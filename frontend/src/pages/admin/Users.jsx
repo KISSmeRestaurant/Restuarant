@@ -13,7 +13,8 @@ import {
   FaRegTimesCircle,
   FaSort,
   FaSortUp,
-  FaSortDown
+  FaSortDown,
+  FaClock
 } from 'react-icons/fa';
 import { RiUserStarFill } from 'react-icons/ri';
 import { toast } from 'react-toastify';
@@ -79,7 +80,8 @@ const AdminUsers = () => {
         user.lastName.toLowerCase().includes(term) ||
         user.email.toLowerCase().includes(term) ||
         (user.phone && user.phone.includes(term))
-  )}
+      );
+    }
     
     // Apply role filter
     if (roleFilter !== 'all') {
@@ -158,40 +160,29 @@ const AdminUsers = () => {
         toast.error('Staff must have at least one permission enabled');
         return;
       }
+
+      // Show loading state
+      const loadingToast = toast.loading('Updating permissions...');
       
-      // First try the dedicated permissions endpoint
-      let response = await fetch(`https://restuarant-sh57.onrender.com/api/admin/staff/${userId}/permissions`, {
+      // Use the role endpoint with permissions (more reliable)
+      const response = await fetch(`https://restuarant-sh57.onrender.com/api/admin/users/${userId}/role`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(permissions)
+        body: JSON.stringify({ 
+          role: 'staff',
+          permissions: permissions
+        })
       });
 
-      console.log('First API response status:', response.status);
-
-      // If 404, fallback to using the role endpoint with permissions
-      if (response.status === 404) {
-        console.log('Trying fallback endpoint...');
-        response = await fetch(`https://restuarant-sh57.onrender.com/api/admin/users/${userId}/role`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ 
-            role: 'staff',
-            permissions: permissions
-          })
-        });
-        console.log('Fallback API response status:', response.status);
-      }
+      console.log('API response status:', response.status);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API Error:', errorText);
-        throw new Error(`Failed to update staff permissions: ${response.status} ${errorText}`);
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('API Error:', errorData);
+        throw new Error(errorData.message || `Failed to update staff permissions: ${response.status}`);
       }
 
       const data = await response.json();
@@ -202,89 +193,95 @@ const AdminUsers = () => {
         throw new Error('Invalid response format from server');
       }
 
-      // Update the local state to reflect the change
-      const updatedUsers = users.map(user => {
+      // Update the local state immediately to reflect the change
+      setUsers(prevUsers => prevUsers.map(user => {
         if (user._id === userId) {
-          const updatedUser = { ...user, ...data.data };
-          console.log('Updated user:', updatedUser);
+          const updatedUser = { 
+            ...user, 
+            permissions: {
+              tableAccess: permissions.tableAccess,
+              dashboardAccess: permissions.dashboardAccess
+            }
+          };
+          console.log('Updated user in state:', updatedUser);
           return updatedUser;
         }
         return user;
-      });
-      
-      setUsers(updatedUsers);
+      }));
       
       const enabledPermissions = [];
       if (permissions.tableAccess) enabledPermissions.push('Tables');
       if (permissions.dashboardAccess) enabledPermissions.push('Kitchen');
       
+      // Dismiss loading toast and show success
+      toast.dismiss(loadingToast);
       toast.success(`Staff permissions updated: ${enabledPermissions.join(', ')}`);
+      
     } catch (err) {
       console.error('Permission update error:', err);
       setError(err.message);
       toast.error(`Error updating permissions: ${err.message}`);
       
-      // Revert the checkbox state by refetching users
-      const fetchUsers = async () => {
-        try {
-          const token = localStorage.getItem('token');
-          const response = await fetch('https://restuarant-sh57.onrender.com/api/admin/users', {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-          if (response.ok) {
-            const data = await response.json();
-            setUsers(data.data);
-          }
-        } catch (fetchErr) {
-          console.error('Error refetching users:', fetchErr);
+      // Revert the UI state by refetching users to ensure consistency
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('https://restuarant-sh57.onrender.com/api/admin/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUsers(data.data);
+          setFilteredUsers(data.data);
         }
-      };
-      fetchUsers();
+      } catch (fetchErr) {
+        console.error('Error refetching users:', fetchErr);
+      }
     }
   };
 
-const deleteUser = async () => {
-  if (!userToDelete) return;
-  
-  try {
-    setIsDeleting(true);
-    const token = localStorage.getItem('token');
-    const response = await fetch(`https://restuarant-sh57.onrender.com/api/admin/users/${userToDelete}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      }
-    });
+  const deleteUser = async () => {
+    if (!userToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://restuarant-sh57.onrender.com/api/admin/users/${userToDelete}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
 
-    // Handle empty response (204 No Content)
-    if (response.status === 204) {
+      // Handle empty response (204 No Content)
+      if (response.status === 204) {
+        setUsers(users.filter(user => user._id !== userToDelete));
+        toast.success('User deleted successfully');
+        setShowDeleteModal(false);
+        setUserToDelete(null);
+        return;
+      }
+
+      // Handle other responses
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete user');
+      }
+
       setUsers(users.filter(user => user._id !== userToDelete));
       toast.success('User deleted successfully');
       setShowDeleteModal(false);
       setUserToDelete(null);
-      return;
+    } catch (err) {
+      console.error('Delete error:', err);
+      toast.error(err.message || 'Error deleting user');
+    } finally {
+      setIsDeleting(false);
     }
+  };
 
-    // Handle other responses
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to delete user');
-    }
-
-    setUsers(users.filter(user => user._id !== userToDelete));
-    toast.success('User deleted successfully');
-    setShowDeleteModal(false);
-    setUserToDelete(null);
-  } catch (err) {
-    console.error('Delete error:', err);
-    toast.error(err.message || 'Error deleting user');
-  } finally {
-    setIsDeleting(false);
-  }
-};
   const startEditing = (userId) => {
     setEditingUserId(userId);
   };
