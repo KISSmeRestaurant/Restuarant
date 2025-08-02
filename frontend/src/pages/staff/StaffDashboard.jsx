@@ -279,16 +279,21 @@ const StaffDashboard = () => {
     return () => clearInterval(interval);
   }, [shiftStatus, shiftStartTime]);
 
-  // Set default tab based on permissions
+  // Set default tab based on permissions - prioritize orders first
   useEffect(() => {
     if (staffDetails && !activeTab) {
       const permissions = staffDetails.permissions || { tableAccess: true, dashboardAccess: true };
       
-      // Set default tab based on available permissions
-      if (permissions.dashboardAccess) {
-        setActiveTab('kitchen');
-      } else if (permissions.tableAccess) {
+      // Set default tab based on available permissions with proper priority
+      if (permissions.tableAccess && permissions.dashboardAccess) {
+        // If both permissions, default to orders
         setActiveTab('orders');
+      } else if (permissions.tableAccess) {
+        // If only table access, show orders
+        setActiveTab('orders');
+      } else if (permissions.dashboardAccess) {
+        // If only dashboard access, show kitchen
+        setActiveTab('kitchen');
       } else {
         // Fallback to feedback if no specific permissions
         setActiveTab('feedback');
@@ -526,7 +531,6 @@ const StaffDashboard = () => {
             updateOrderStatus={updateOrderStatus}
           />
         )}
-
 
         {activeTab === 'feedback' && (
           <FeedbackTab 
