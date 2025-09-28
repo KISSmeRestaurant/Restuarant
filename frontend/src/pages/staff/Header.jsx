@@ -7,7 +7,8 @@ import {
   FaTable, 
   FaTachometerAlt,
   FaSignOutAlt,
-  FaCog
+  FaCog,
+  FaLock
 } from 'react-icons/fa';
 
 const Header = ({ 
@@ -21,7 +22,7 @@ const Header = ({
   markNotificationAsRead = () => {}
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);  
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -31,18 +32,40 @@ const Header = ({
     navigate('/login');
   };
 
-  const navigationItems = [
-    {
-      name: 'Dashboard',
-      path: '/staff/dashboard',
-      icon: FaTachometerAlt
-    },
-    {
-      name: 'Tables',
-      path: '/staff/tables',
-      icon: FaTable
+  // Get navigation items with permission checks
+  const getNavigationItems = () => {
+    // Use real-time permissions from staffDetails, with fallback to localStorage
+    let permissions = staffDetails?.permissions;
+    
+    // If staffDetails is not available yet, try to get from localStorage
+    if (!permissions) {
+      try {
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        permissions = userData.permissions || { tableAccess: false, dashboardAccess: false };
+      } catch {
+        permissions = { tableAccess: false, dashboardAccess: false };
+      }
     }
-  ];
+    
+    return [
+      {
+        name: 'Dashboard',
+        path: '/staff/dashboard',
+        icon: FaTachometerAlt,
+        hasAccess: true,
+        tooltip: null
+      },
+      {
+        name: 'Tables',
+        path: '/staff/tables',
+        icon: FaTable,
+        hasAccess: true,
+        tooltip: null
+      }
+    ];
+  };
+
+  const navigationItems = getNavigationItems();
 
   return (
     <div className="shadow bg-white">
@@ -58,20 +81,39 @@ const Header = ({
               {navigationItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
+                const isLocked = !item.hasAccess;
                 
                 return (
-                  <button
-                    key={item.path}
-                    onClick={() => navigate(item.path)}
-                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Icon className="mr-2" />
-                    {item.name}
-                  </button>
+                  <div key={item.path} className="relative group">
+                    <button
+                      onClick={() => {
+                        if (item.hasAccess) {
+                          navigate(item.path);
+                        }
+                      }}
+                      disabled={isLocked}
+                      className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        isLocked
+                          ? 'text-gray-400 cursor-not-allowed bg-gray-50'
+                          : isActive
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                      title={item.tooltip}
+                    >
+                      <Icon className="mr-2" />
+                      {item.name}
+                      {isLocked && <FaLock className="ml-2 text-xs" />}
+                    </button>
+                    
+                    {/* Tooltip for locked items */}
+                    {isLocked && item.tooltip && (
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
+                        {item.tooltip}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </nav>

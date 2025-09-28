@@ -55,8 +55,19 @@ const AdminUsers = () => {
         }
 
         const data = await response.json();
-        setUsers(data.data);
-        setFilteredUsers(data.data);
+        
+        // Ensure permissions are properly set for all users
+        const usersWithPermissions = data.data.map(user => ({
+          ...user,
+          permissions: user.permissions || {
+            tableAccess: false,
+            dashboardAccess: false
+          }
+        }));
+        
+        console.log('Fetched users with permissions:', usersWithPermissions);
+        setUsers(usersWithPermissions);
+        setFilteredUsers(usersWithPermissions);
       } catch (err) {
         setError(err.message);
         toast.error(`Error fetching users: ${err.message}`);
@@ -149,7 +160,7 @@ const AdminUsers = () => {
     }
   };
 
-  // Update staff permissions
+  // Update staff permissions using the working role endpoint as a workaround
   const updateStaffPermissions = async (userId, permissions) => {
     try {
       const token = localStorage.getItem('token');
@@ -164,16 +175,20 @@ const AdminUsers = () => {
       // Show loading state
       const loadingToast = toast.loading('Updating permissions...');
       
-      // Use the role endpoint with permissions (more reliable)
+      // WORKAROUND: Since /api/admin/staff/:id/permissions is not working,
+      // we'll use the working /api/admin/users/:id/role endpoint with permissions
       const response = await fetch(`https://restuarant-sh57.onrender.com/api/admin/users/${userId}/role`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 
-          role: 'staff',
-          permissions: permissions
+        body: JSON.stringify({
+          role: 'staff', // Keep the role as staff
+          permissions: {
+            tableAccess: permissions.tableAccess,
+            dashboardAccess: permissions.dashboardAccess
+          }
         })
       });
 
@@ -198,7 +213,8 @@ const AdminUsers = () => {
         if (user._id === userId) {
           const updatedUser = { 
             ...user, 
-            permissions: {
+            ...data.data, // Use the response data which should include updated permissions
+            permissions: data.data.permissions || {
               tableAccess: permissions.tableAccess,
               dashboardAccess: permissions.dashboardAccess
             }

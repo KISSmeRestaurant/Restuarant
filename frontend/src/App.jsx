@@ -4,6 +4,7 @@ import { ToastContainer } from 'react-toastify';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import AuthCallback from './pages/AuthCallback';
 import AdminUsers from './pages/admin/Users';
 import Navbar from './components/common/Navbar';
 import UserDashboard from './pages/UserDashboard';
@@ -130,6 +131,7 @@ const AppContent = () => {
               <Signup />
           } 
         />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/terms" element={<Terms />} />

@@ -5,6 +5,7 @@ import validator from 'validator';
 import User from '../models/User.js';
 import { JWT_SECRET, JWT_EXPIRES_IN, JWT_COOKIE_EXPIRES } from '../config/constants.js';
 import nodemailer from 'nodemailer';
+import passport from '../config/passport.js';
 
 
 // Helper function to create and send token
@@ -485,6 +486,157 @@ export const resetPasswordWithOTP = async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: err.message || 'Error resetting password'
+    });
+  }
+};
+
+// Google OAuth Authentication
+export const googleAuth = passport.authenticate('google', {
+  scope: ['profile', 'email']
+});
+
+// Google OAuth Callback
+export const googleCallback = (req, res, next) => {
+  passport.authenticate('google', { session: false }, (err, user, info) => {
+    if (err) {
+      console.error('Google OAuth Error:', err);
+      return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_error`);
+    }
+    
+    if (!user) {
+      return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`);
+    }
+
+    try {
+      // Update last login
+      user.lastLogin = Date.now();
+      user.save({ validateBeforeSave: false });
+
+      // Create JWT token
+      const token = jwt.sign(
+        { userId: user._id, role: user.role },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
+
+      // Set cookie options
+      const cookieOptions = {
+        expires: new Date(Date.now() + JWT_COOKIE_EXPIRES * 24 * 60 * 60 * 1000),
+        httpOnly: true,
+        secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
+        sameSite: 'strict'
+      };
+
+      // Set cookie
+      res.cookie('jwt', token, cookieOptions);
+
+      // Determine redirect URL based on user role
+      const redirectUrl = user.role === 'admin' 
+        ? '/admin/dashboard' 
+        : user.role === 'staff' 
+        ? '/staff/dashboard' 
+        : '/';
+
+      // Redirect to frontend with token and user data
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+      res.redirect(`${clientUrl}/auth/callback?token=${token}&redirect=${encodeURIComponent(redirectUrl)}`);
+
+    } catch (error) {
+      console.error('Token creation error:', error);
+      res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=token_error`);
+    }
+  })(req, res, next);
+};
+
+// Appwrite OAuth Sync - Sync Appwrite user with backend database
+export const appwriteSync = async (req, res) => {
+  try {
+    const { appwriteId, email, name, emailVerification } = req.body;
+
+    if (!appwriteId || !email || !name) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Missing required fields: appwriteId, email, name'
+      });
+    }
+
+    // Split name into first and last name
+    const nameParts = name.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    // Check if user already exists with this Appwrite ID
+    let user = await User.findOne({ appwriteId });
+
+    if (user) {
+      // User exists, update last login
+      user.lastLogin = Date.now();
+      await user.save({ validateBeforeSave: false });
+    } else {
+      // Check if user exists with same email
+      user = await User.findOne({ email });
+
+      if (user) {
+        // User exists with same email, link Appwrite account
+        user.appwriteId = appwriteId;
+        user.emailVerified = emailVerification || user.emailVerified;
+        user.lastLogin = Date.now();
+        await user.save({ validateBeforeSave: false });
+      } else {
+        // Create new user
+        user = await User.create({
+          appwriteId,
+          firstName,
+          lastName,
+          email,
+          emailVerified: emailVerification || true,
+          termsAccepted: true, // Assume terms accepted for OAuth
+          password: undefined, // No password for OAuth users
+          passwordConfirm: undefined,
+          lastLogin: Date.now()
+        });
+      }
+    }
+
+    // Create JWT token
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    // Set cookie
+    const cookieOptions = {
+      expires: new Date(Date.now() + JWT_COOKIE_EXPIRES * 24 * 60 * 60 * 1000),
+      httpOnly: true,
+      secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
+      sameSite: 'strict'
+    };
+
+    res.cookie('jwt', token, cookieOptions);
+
+    // Return user data and token
+    res.status(200).json({
+      status: 'success',
+      token,
+      data: {
+        user: {
+          _id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role,
+          emailVerified: user.emailVerified,
+          appwriteId: user.appwriteId
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Appwrite sync error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'Error syncing with Appwrite'
     });
   }
 };

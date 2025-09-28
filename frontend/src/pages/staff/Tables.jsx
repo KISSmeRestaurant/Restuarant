@@ -10,15 +10,18 @@ import {
   FaCheck,
   FaClock,
   FaArrowLeft,
-  FaPrint
+  FaPrint,
+  FaCalendarAlt
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import Header from './Header';
 import SearchBar from '../../components/common/SearchBar';
+import ReservationsTab from './ReservationsTab';
 import { apiRequest } from '../../config/api.js';
 
 const Tables = () => {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('orders');
   const [tables, setTables] = useState([]);
   const [foodItems, setFoodItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -678,6 +681,40 @@ const Tables = () => {
           </div>
         </div>
 
+        {/* Tab Navigation */}
+        <div className="bg-white rounded-lg shadow-sm mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8 px-6">
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'orders'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center">
+                  <FaUtensils className="mr-2" />
+                  Table Orders
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('reservations')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'reservations'
+                    ? 'border-green-500 text-green-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center">
+                  <FaCalendarAlt className="mr-2" />
+                  Reservations
+                </div>
+              </button>
+            </nav>
+          </div>
+        </div>
+
         {/* Error Message */}
         {error && (
           <div className="mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded">
@@ -685,95 +722,102 @@ const Tables = () => {
           </div>
         )}
 
-        {/* Tables Grid */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {tables.map((table) => (
-                <motion.div
-                  key={table._id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  whileHover={{ scale: 1.02 }}
-                  className={`relative p-6 rounded-lg border-2 transition-all cursor-pointer ${getStatusColor(table.status)}`}
-                >
-                  <div className="text-center">
-                    <div className="flex justify-center mb-3">
-                      {getStatusIcon(table.status)}
-                    </div>
-                    
-                    <h4 className="font-semibold text-xl mb-2">
-                      Table {table.tableNumber}
-                    </h4>
-                    
-                    <div className="flex items-center justify-center text-sm mb-3">
-                      <FaUsers className="mr-2" />
-                      <span>{table.capacity} seats</span>
-                    </div>
-                    
-                    <div className="text-sm mb-4 capitalize font-medium">
-                      {table.location}
-                    </div>
-                    
-                    <div className={`text-sm font-medium px-3 py-1 rounded-full mb-4 ${getStatusColor(table.status)}`}>
-                      {table.status}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="space-y-2">
-                      {table.status === 'available' && (
-                        <button
-                          onClick={() => handleTakeOrder(table)}
-                          className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center justify-center"
-                        >
-                          <FaPlus className="mr-2" />
-                          Take Order
-                        </button>
-                      )}
+        {/* Tab Content */}
+        {activeTab === 'orders' && (
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                {tables.map((table) => (
+                  <motion.div
+                    key={table._id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileHover={{ scale: 1.02 }}
+                    className={`relative p-6 rounded-lg border-2 transition-all cursor-pointer ${getStatusColor(table.status)}`}
+                  >
+                    <div className="text-center">
+                      <div className="flex justify-center mb-3">
+                        {getStatusIcon(table.status)}
+                      </div>
                       
-                      {table.status === 'occupied' && (
-                        <>
+                      <h4 className="font-semibold text-xl mb-2">
+                        Table {table.tableNumber}
+                      </h4>
+                      
+                      <div className="flex items-center justify-center text-sm mb-3">
+                        <FaUsers className="mr-2" />
+                        <span>{table.capacity} seats</span>
+                      </div>
+                      
+                      <div className="text-sm mb-4 capitalize font-medium">
+                        {table.location}
+                      </div>
+                      
+                      <div className={`text-sm font-medium px-3 py-1 rounded-full mb-4 ${getStatusColor(table.status)}`}>
+                        {table.status}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="space-y-2">
+                        {table.status === 'available' && (
                           <button
-                            onClick={() => handleAddMoreFood(table)}
-                            className="w-full bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors flex items-center justify-center"
+                            onClick={() => handleTakeOrder(table)}
+                            className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center justify-center"
                           >
                             <FaPlus className="mr-2" />
-                            Add More Food
+                            Take Order
                           </button>
+                        )}
+                        
+                        {table.status === 'occupied' && (
+                          <>
+                            <button
+                              onClick={() => handleAddMoreFood(table)}
+                              className="w-full bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors flex items-center justify-center"
+                            >
+                              <FaPlus className="mr-2" />
+                              Add More Food
+                            </button>
+                            <button
+                              onClick={() => handlePrintBill(table)}
+                              className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition-colors flex items-center justify-center"
+                            >
+                              <FaPrint className="mr-2" />
+                              Print Bill
+                            </button>
+                          </>
+                        )}
+                        
+                        {table.status === 'cleaning' && (
                           <button
-                            onClick={() => handlePrintBill(table)}
-                            className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition-colors flex items-center justify-center"
+                            onClick={() => updateTableStatus(table._id, 'available')}
+                            className="w-full bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors"
                           >
-                            <FaPrint className="mr-2" />
-                            Print Bill
+                            Mark Available
                           </button>
-                        </>
-                      )}
-                      
-                      {table.status === 'cleaning' && (
-                        <button
-                          onClick={() => updateTableStatus(table._id, 'available')}
-                          className="w-full bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors"
-                        >
-                          Mark Available
-                        </button>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Empty State */}
-            {tables.length === 0 && (
-              <div className="text-center py-12">
-                <FaTable className="mx-auto text-6xl text-gray-300 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">No Tables Available</h3>
-                <p className="text-gray-500">Contact admin to set up restaurant tables</p>
+                  </motion.div>
+                ))}
               </div>
-            )}
+
+              {/* Empty State */}
+              {tables.length === 0 && (
+                <div className="text-center py-12">
+                  <FaTable className="mx-auto text-6xl text-gray-300 mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-600 mb-2">No Tables Available</h3>
+                  <p className="text-gray-500">Contact admin to set up restaurant tables</p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Reservations Tab Content */}
+        {activeTab === 'reservations' && (
+          <ReservationsTab />
+        )}
       </div>
 
       {/* Order Modal */}

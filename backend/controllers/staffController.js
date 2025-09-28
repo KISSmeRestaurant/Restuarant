@@ -10,6 +10,25 @@ export const getStaffDetails = async (req, res) => {
   try {
     const staff = req.user;
     
+    // Ensure permissions object exists with proper defaults
+    // Only provide defaults if permissions object is completely missing (null/undefined)
+    // If permissions exist but have false values, respect those values
+    let permissions;
+    if (!staff.permissions) {
+      // Only when permissions object is completely missing, set defaults to false
+      // This matches the User model defaults
+      permissions = {
+        tableAccess: false,
+        dashboardAccess: false
+      };
+    } else {
+      // Use actual permissions from database, respecting false values
+      permissions = {
+        tableAccess: staff.permissions.tableAccess || false,
+        dashboardAccess: staff.permissions.dashboardAccess || false
+      };
+    }
+    
     res.status(200).json({
       status: 'success',
       data: {
@@ -19,10 +38,7 @@ export const getStaffDetails = async (req, res) => {
         email: staff.email,
         role: staff.role,
         phone: staff.phone,
-        permissions: staff.permissions || {
-          tableAccess: true,
-          dashboardAccess: true
-        },
+        permissions: permissions,
         createdAt: staff.createdAt
       }
     });

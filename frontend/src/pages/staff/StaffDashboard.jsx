@@ -2,11 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FaUtensils, 
-  FaTable,
-  FaUser,
-  FaBell,
-  FaSearch,
-  FaClock
+  FaSearch
 } from 'react-icons/fa';
 import { MdKitchen, MdRateReview } from 'react-icons/md';
 import { fetchWithAuth } from '../../services/auth';
@@ -15,13 +11,11 @@ import { fetchWithAuth } from '../../services/auth';
 import Header from './Header';
 import StatsOverview from './StatsOverview';
 import OrdersTab from './OrdersTab';
-import ReservationsTab from './ReservationsTab';
 import KitchenTab from './KitchenTab';
 import FeedbackTab from './FeedbackTab';
 
 const StaffDashboard = () => {
   const [orders, setOrders] = useState([]);
-  const [reservations, setReservations] = useState([]);
   const [customerFeedback, setCustomerFeedback] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -62,17 +56,6 @@ const StaffDashboard = () => {
     }
   };
 
-  const checkForNewReservations = (newReservations) => {
-    if (reservations.length > 0 && newReservations.length > reservations.length) {
-      const newReservation = newReservations.find(res => 
-        !reservations.some(r => r._id === res._id)
-      );
-      if (newReservation) {
-        addNotification(`New reservation from ${newReservation.name}`);
-      }
-    }
-  };
-
   // Data fetching functions
   const fetchActiveShift = async () => {
     try {
@@ -108,25 +91,6 @@ const StaffDashboard = () => {
     const data = await response.json();
     setOrders(data.data);
     checkForNewOrders(data.data);
-  };
-
-  const fetchReservations = async () => {
-    try {
-      const response = await fetchWithAuth('https://restuarant-sh57.onrender.com/api/staff/reservations');
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      const reservationsData = Array.isArray(data) ? data : (data.data || []);
-      setReservations(reservationsData);
-      checkForNewReservations(reservationsData);
-    } catch (error) {
-      console.error('Error fetching reservations:', error);
-      setError('Failed to load reservations. Please try again.');
-      setReservations([]);
-    }
   };
 
   const fetchCustomerFeedback = async () => {
@@ -236,33 +200,6 @@ const StaffDashboard = () => {
     }
   };
 
-  const updateReservationStatus = async (reservationId, newStatus) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`https://restuarant-sh57.onrender.com/api/staff/reservations/${reservationId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-
-      if (!response.ok) throw new Error('Failed to update reservation status');
-
-      setReservations(reservations.map(res => 
-        res._id === reservationId ? { ...res, status: newStatus } : res
-      ));
-      
-      const reservation = reservations.find(r => r._id === reservationId);
-      if (reservation) {
-        addNotification(`Reservation #${reservationId.slice(-6)} status changed to ${newStatus}`);
-      }
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
   // Calculate shift duration
   useEffect(() => {
     let interval;
@@ -279,65 +216,94 @@ const StaffDashboard = () => {
     return () => clearInterval(interval);
   }, [shiftStatus, shiftStartTime]);
 
-  // Set default tab based on permissions - prioritize orders first
+  // Set default tab based on permissions - prioritize kitchen first
   useEffect(() => {
     if (staffDetails && !activeTab) {
       const permissions = staffDetails.permissions || { tableAccess: true, dashboardAccess: true };
       
+      // Debug logging
+      console.log('Staff Details:', staffDetails);
+      console.log('Permissions:', permissions);
+      
       // Set default tab based on available permissions with proper priority
-      if (permissions.tableAccess && permissions.dashboardAccess) {
-        // If both permissions, default to orders
-        setActiveTab('orders');
+      if (permissions.dashboardAccess) {
+        // If dashboard access, default to kitchen
+        setActiveTab('kitchen');
+        console.log('Setting default tab to kitchen');
       } else if (permissions.tableAccess) {
         // If only table access, show orders
         setActiveTab('orders');
-      } else if (permissions.dashboardAccess) {
-        // If only dashboard access, show kitchen
-        setActiveTab('kitchen');
+        console.log('Setting default tab to orders');
       } else {
         // Fallback to feedback if no specific permissions
         setActiveTab('feedback');
+        console.log('Setting default tab to feedback');
       }
     }
   }, [staffDetails, activeTab]);
+
+  // Function to fetch staff details
+  const fetchStaffDetails = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        navigate('/login');
+        return null;
+      }
+
+      const staffResponse = await fetch('https://restuarant-sh57.onrender.com/api/staff/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      });
+
+      if (!staffResponse.ok) {
+        if (staffResponse.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          navigate('/login');
+          return null;
+        }
+        throw new Error('Failed to fetch staff details');
+      }
+
+      const staffData = await staffResponse.json();
+      
+      // Update localStorage with fresh user data including permissions
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const updatedUser = { 
+        ...currentUser, 
+        permissions: staffData.data.permissions 
+      };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      return staffData.data;
+    } catch (err) {
+      console.error('Error fetching staff details:', err);
+      setError(err.message);
+      return null;
+    }
+  };
 
   // Initial data fetching
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem('token');
-        
-        if (!token) {
-          navigate('/login');
-          return;
-        }
+        setLoading(true);
 
         // First check for active shift
         await fetchActiveShift();
 
-        // Then fetch other data
-        const staffResponse = await fetch('https://restuarant-sh57.onrender.com/api/staff/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-        });
-
-        if (!staffResponse.ok) {
-          if (staffResponse.status === 401) {
-            localStorage.removeItem('token');
-            navigate('/login');
-            return;
-          }
-          throw new Error('Failed to fetch staff details');
+        // Then fetch staff details
+        const staffData = await fetchStaffDetails();
+        if (staffData) {
+          setStaffDetails(staffData);
         }
-
-        const staffData = await staffResponse.json();
-        setStaffDetails(staffData.data);
 
         await Promise.all([
           fetchOrders(),
-          fetchReservations(),
           fetchCustomerFeedback()
         ]);
       } catch (err) {
@@ -351,6 +317,53 @@ const StaffDashboard = () => {
     fetchData();
   }, [navigate]);
 
+  // Periodic permission check - refresh staff details every 30 seconds
+  useEffect(() => {
+    const permissionCheckInterval = setInterval(async () => {
+      const updatedStaffData = await fetchStaffDetails();
+      if (updatedStaffData) {
+        // Only update if permissions have actually changed
+        const currentPermissions = staffDetails?.permissions;
+        const newPermissions = updatedStaffData.permissions;
+        
+        if (JSON.stringify(currentPermissions) !== JSON.stringify(newPermissions)) {
+          console.log('Permissions updated:', newPermissions);
+          setStaffDetails(updatedStaffData);
+          
+          // Show notification about permission change
+          const enabledPermissions = [];
+          const disabledPermissions = [];
+          
+          if (newPermissions?.tableAccess !== currentPermissions?.tableAccess) {
+            if (newPermissions?.tableAccess) {
+              enabledPermissions.push('Tables');
+            } else {
+              disabledPermissions.push('Tables');
+            }
+          }
+          
+          if (newPermissions?.dashboardAccess !== currentPermissions?.dashboardAccess) {
+            if (newPermissions?.dashboardAccess) {
+              enabledPermissions.push('Kitchen');
+            } else {
+              disabledPermissions.push('Kitchen');
+            }
+          }
+          
+          if (enabledPermissions.length > 0) {
+            addNotification(`Access granted to: ${enabledPermissions.join(', ')}`);
+          }
+          
+          if (disabledPermissions.length > 0) {
+            addNotification(`Access removed from: ${disabledPermissions.join(', ')}`);
+          }
+        }
+      }
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(permissionCheckInterval);
+  }, [staffDetails?.permissions]);
+
   // Filter data based on search query
   const filteredOrders = useMemo(() => {
     if (!searchQuery) return orders;
@@ -360,15 +373,6 @@ const StaffDashboard = () => {
       order.status.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [orders, searchQuery]);
-
-  const filteredReservations = useMemo(() => {
-    if (!searchQuery) return reservations;
-    return reservations.filter(reservation => 
-      reservation._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      reservation.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      reservation.status.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [reservations, searchQuery]);
 
   const filteredFeedback = useMemo(() => {
     if (!searchQuery) return customerFeedback;
@@ -418,7 +422,7 @@ const StaffDashboard = () => {
             </div>
             <input
               type="text"
-              placeholder="Search orders, reservations, feedback..."
+              placeholder="Search orders, feedback..."
               className="block w-full pl-10 pr-3 py-3 rounded-lg bg-gray-100 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -431,16 +435,36 @@ const StaffDashboard = () => {
       <div className="sticky top-16 z-10 bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex overflow-x-auto">
-            {/* Orders Tab - Show if staff has table access or dashboard access */}
+            {/* Kitchen Tab - Only show if user has dashboard access */}
+            
+              <button
+                onClick={() => setActiveTab('kitchen')}
+                className={`px-6 py-4 font-medium text-base flex-shrink-0 ${
+                  activeTab === 'kitchen' 
+                    ? 'border-b-2 border-yellow-500 text-yellow-600' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <div className="flex items-center">
+                  <MdKitchen className="mr-2 text-lg" /> 
+                  Kitchen
+                </div>
+              </button>
+            
+
+            {/* Orders Tab - Only show if user has table access or dashboard access */}
             {(staffDetails?.permissions?.tableAccess || staffDetails?.permissions?.dashboardAccess) && (
               <button
                 onClick={() => setActiveTab('orders')}
-                className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'orders' ? 
-                  'border-b-2 border-blue-500 text-blue-600' : 
-                  'text-gray-500 hover:text-gray-700'}`}
+                className={`px-6 py-4 font-medium text-base flex-shrink-0 ${
+                  activeTab === 'orders' 
+                    ? 'border-b-2 border-blue-500 text-blue-600' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
               >
                 <div className="flex items-center">
-                  <FaUtensils className="mr-2 text-lg" /> Orders
+                  <FaUtensils className="mr-2 text-lg" /> 
+                  Orders
                   {orders.filter(o => o.status === 'pending').length > 0 && (
                     <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
                       {orders.filter(o => o.status === 'pending').length}
@@ -450,40 +474,7 @@ const StaffDashboard = () => {
               </button>
             )}
             
-            {/* Reservations Tab - Show if staff has table access */}
-            {staffDetails?.permissions?.tableAccess && (
-              <button
-                onClick={() => setActiveTab('reservations')}
-                className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'reservations' ? 
-                  'border-b-2 border-green-500 text-green-600' : 
-                  'text-gray-500 hover:text-gray-700'}`}
-              >
-                <div className="flex items-center">
-                  <FaTable className="mr-2 text-lg" /> Reservations
-                  {reservations.filter(r => r.status === 'pending').length > 0 && (
-                    <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                      {reservations.filter(r => r.status === 'pending').length}
-                    </span>
-                  )}
-                </div>
-              </button>
-            )}
-            
-            {/* Kitchen Tab - Show only if staff has dashboard access */}
-            {staffDetails?.permissions?.dashboardAccess && (
-              <button
-                onClick={() => setActiveTab('kitchen')}
-                className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'kitchen' ? 
-                  'border-b-2 border-yellow-500 text-yellow-600' : 
-                  'text-gray-500 hover:text-gray-700'}`}
-              >
-                <div className="flex items-center">
-                  <MdKitchen className="mr-2 text-lg" /> Kitchen
-                </div>
-              </button>
-            )}
-            
-            {/* Feedback Tab - Always show */}
+            {/* Feedback Tab - Always show and accessible */}
             <button
               onClick={() => setActiveTab('feedback')}
               className={`px-6 py-4 font-medium text-base flex-shrink-0 ${activeTab === 'feedback' ? 
@@ -506,29 +497,20 @@ const StaffDashboard = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <StatsOverview 
           orders={orders} 
-          reservations={reservations} 
           customerFeedback={customerFeedback}
         />
-
-        {activeTab === 'orders' && (
-          <OrdersTab 
-            orders={filteredOrders} 
-            updateOrderStatus={updateOrderStatus} 
-          />
-        )}
-
-        {activeTab === 'reservations' && (
-          <ReservationsTab 
-            reservations={filteredReservations} 
-            updateReservationStatus={updateReservationStatus}
-            isLoading={loading}
-          />
-        )}
 
         {activeTab === 'kitchen' && (
           <KitchenTab 
             orders={filteredOrders} 
             updateOrderStatus={updateOrderStatus}
+          />
+        )}
+
+        {activeTab === 'orders' && (staffDetails?.permissions?.tableAccess || staffDetails?.permissions?.dashboardAccess) && (
+          <OrdersTab 
+            orders={filteredOrders} 
+            updateOrderStatus={updateOrderStatus} 
           />
         )}
 

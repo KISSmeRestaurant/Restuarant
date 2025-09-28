@@ -79,7 +79,7 @@ export const getAllUsers = async (req, res, next) => {
 export const updateUserRole = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { role } = req.body;
+    const { role, permissions } = req.body;
 
     if (!['user', 'staff', 'admin'].includes(role)) {
       return res.status(400).json({
@@ -88,13 +88,40 @@ export const updateUserRole = async (req, res, next) => {
       });
     }
 
+    // Get the current user data for logging
+    const currentUser = await User.findById(id).select('-password');
+    if (!currentUser) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'User not found'
+      });
+    }
+
+    console.log(`Admin ${req.user.email} updating user ${currentUser.email} role from ${currentUser.role} to ${role}`);
+
     // Set default permissions for staff role
     const updateData = { role };
     if (role === 'staff') {
+      // If permissions are provided in the request, use them; otherwise use defaults
+      if (permissions) {
+        updateData.permissions = {
+          tableAccess: permissions.tableAccess || false,
+          dashboardAccess: permissions.dashboardAccess || false
+        };
+      } else {
+        updateData.permissions = {
+          tableAccess: true,
+          dashboardAccess: true
+        };
+      }
+      console.log(`Setting staff permissions for ${currentUser.email}:`, updateData.permissions);
+    } else {
+      // For non-staff roles, clear permissions
       updateData.permissions = {
-        tableAccess: true,
-        dashboardAccess: true
+        tableAccess: false,
+        dashboardAccess: false
       };
+      console.log(`Clearing permissions for ${currentUser.email} (role: ${role})`);
     }
 
     const user = await User.findByIdAndUpdate(
@@ -103,37 +130,45 @@ export const updateUserRole = async (req, res, next) => {
       { new: true, runValidators: true }
     ).select('-password');
 
-    if (!user) {
-      return res.status(404).json({
-        status: 'fail',
-        message: 'User not found'
-      });
-    }
+    console.log(`Successfully updated user ${user.email} - New role: ${user.role}, New permissions:`, user.permissions);
 
     res.status(200).json({
       status: 'success',
       data: user
     });
   } catch (err) {
+    console.error('Error updating user role:', err);
     next(err);
   }
 };
 
 export const updateStaffPermissions = async (req, res, next) => {
+  console.log('🔧 updateStaffPermissions function called');
+  console.log('Request params:', req.params);
+  console.log('Request body:', req.body);
+  console.log('User making request:', req.user?.email, 'Role:', req.user?.role);
+  
   try {
     const { id } = req.params;
     const { tableAccess, dashboardAccess } = req.body;
 
+    console.log(`Processing permission update for user ID: ${id}`);
+    console.log(`New permissions: tableAccess=${tableAccess}, dashboardAccess=${dashboardAccess}`);
+
     // Find the user and check if they are staff
     const user = await User.findById(id);
     if (!user) {
+      console.log(`❌ User not found with ID: ${id}`);
       return res.status(404).json({
         status: 'fail',
         message: 'User not found'
       });
     }
 
+    console.log(`✅ Found user: ${user.email}, Role: ${user.role}`);
+
     if (user.role !== 'staff') {
+      console.log(`❌ User ${user.email} is not staff (role: ${user.role})`);
       return res.status(400).json({
         status: 'fail',
         message: 'Permissions can only be updated for staff members'
@@ -142,11 +177,16 @@ export const updateStaffPermissions = async (req, res, next) => {
 
     // Validate that at least one permission is granted
     if (!tableAccess && !dashboardAccess) {
+      console.log('❌ No permissions granted - at least one must be enabled');
       return res.status(400).json({
         status: 'fail',
         message: 'Staff must have at least one permission (table or dashboard access)'
       });
     }
+
+    console.log(`Admin ${req.user.email} updating permissions for staff ${user.email}`);
+    console.log(`Previous permissions:`, user.permissions);
+    console.log(`New permissions: tableAccess=${tableAccess}, dashboardAccess=${dashboardAccess}`);
 
     // Update permissions
     const updatedUser = await User.findByIdAndUpdate(
@@ -158,12 +198,15 @@ export const updateStaffPermissions = async (req, res, next) => {
       { new: true, runValidators: true }
     ).select('-password');
 
+    console.log(`✅ Successfully updated permissions for ${updatedUser.email}:`, updatedUser.permissions);
+
     res.status(200).json({
       status: 'success',
       message: 'Staff permissions updated successfully',
       data: updatedUser
     });
   } catch (err) {
+    console.error('❌ Error updating staff permissions:', err);
     next(err);
   }
 };

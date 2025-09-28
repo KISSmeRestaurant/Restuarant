@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiEye, FiEyeOff, FiMail, FiLock, FiArrowRight } from 'react-icons/fi';
 import { FaGoogle, FaFacebook, FaApple } from 'react-icons/fa';
+import appwriteAuthService from '../services/appwriteAuth';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -191,6 +192,16 @@ const Login = () => {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={async () => {
+                    try {
+                      setLoading(true);
+                      await appwriteAuthService.loginWithGoogle();
+                    } catch (error) {
+                      console.error('Google login error:', error);
+                      setError('Failed to initiate Google login');
+                      setLoading(false);
+                    }
+                  }}
                   className="flex items-center justify-center py-3 px-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   <FaGoogle className="text-red-500" />
@@ -198,14 +209,16 @@ const Login = () => {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex items-center justify-center py-3 px-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                  className="flex items-center justify-center py-3 px-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors opacity-50 cursor-not-allowed"
+                  disabled
                 >
                   <FaFacebook className="text-blue-600" />
                 </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex items-center justify-center py-3 px-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                  className="flex items-center justify-center py-3 px-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors opacity-50 cursor-not-allowed"
+                  disabled
                 >
                   <FaApple className="text-gray-800" />
                 </motion.button>

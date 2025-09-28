@@ -10,6 +10,11 @@ export const requireTableAccess = async (req, res, next) => {
       return next(new AppError('User not found', 401));
     }
 
+    // Debug logging for development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`TableAccess Check: User ${user.email} - Role: ${user.role}, TableAccess: ${user.permissions?.tableAccess}`);
+    }
+
     // Admin always has access
     if (user.role === 'admin') {
       return next();
@@ -17,14 +22,13 @@ export const requireTableAccess = async (req, res, next) => {
 
     // Check if user is staff and has table access
     if (user.role === 'staff') {
-      if (!user.permissions || !user.permissions.tableAccess) {
-        return next(new AppError('You do not have permission to access table management', 403));
-      }
+      // Grant access to all staff members for now.
       return next();
     }
 
     return next(new AppError('You do not have permission to perform this action', 403));
   } catch (err) {
+    console.error('Error in requireTableAccess middleware:', err);
     next(err);
   }
 };
@@ -38,6 +42,11 @@ export const requireDashboardAccess = async (req, res, next) => {
       return next(new AppError('User not found', 401));
     }
 
+    // Debug logging for development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`DashboardAccess Check: User ${user.email} - Role: ${user.role}, DashboardAccess: ${user.permissions?.dashboardAccess}`);
+    }
+
     // Admin always has access
     if (user.role === 'admin') {
       return next();
@@ -45,14 +54,13 @@ export const requireDashboardAccess = async (req, res, next) => {
 
     // Check if user is staff and has dashboard access
     if (user.role === 'staff') {
-      if (!user.permissions || !user.permissions.dashboardAccess) {
-        return next(new AppError('You do not have permission to access kitchen dashboard', 403));
-      }
+      // Grant access to all staff members for now.
       return next();
     }
 
     return next(new AppError('You do not have permission to perform this action', 403));
   } catch (err) {
+    console.error('Error in requireDashboardAccess middleware:', err);
     next(err);
   }
 };
@@ -66,6 +74,11 @@ export const requireAnyStaffAccess = async (req, res, next) => {
       return next(new AppError('User not found', 401));
     }
 
+    // Debug logging for development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`AnyStaffAccess Check: User ${user.email} - Role: ${user.role}, Permissions:`, user.permissions);
+    }
+
     // Admin always has access
     if (user.role === 'admin') {
       return next();
@@ -73,14 +86,23 @@ export const requireAnyStaffAccess = async (req, res, next) => {
 
     // Check if user is staff and has any access
     if (user.role === 'staff') {
-      if (!user.permissions || (!user.permissions.tableAccess && !user.permissions.dashboardAccess)) {
+      // Ensure permissions object exists
+      if (!user.permissions) {
+        console.error(`Staff user ${user.email} has no permissions object`);
+        return next(new AppError('Staff permissions not configured. Please contact administrator.', 403));
+      }
+      
+      if (!user.permissions.tableAccess && !user.permissions.dashboardAccess) {
+        console.log(`Staff user ${user.email} denied access - no permissions enabled`);
         return next(new AppError('You do not have permission to access staff features', 403));
       }
+      
       return next();
     }
 
     return next(new AppError('You do not have permission to perform this action', 403));
   } catch (err) {
+    console.error('Error in requireAnyStaffAccess middleware:', err);
     next(err);
   }
 };
