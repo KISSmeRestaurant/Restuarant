@@ -5,7 +5,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Toolti
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const StatsOverview = ({ orders, reservations, customerFeedback, darkMode }) => {
+const StatsOverview = ({ orders, customerFeedback, darkMode }) => {
   // Calculate order status distribution
   const orderStatusData = {
     pending: orders.filter(o => o.status === 'pending').length,
@@ -14,11 +14,10 @@ const StatsOverview = ({ orders, reservations, customerFeedback, darkMode }) => 
     delivered: orders.filter(o => o.status === 'delivered').length
   };
 
-  // Calculate reservation status distribution
-  const reservationStatusData = {
-    pending: reservations.filter(r => r.status === 'pending').length,
-    confirmed: reservations.filter(r => r.status === 'confirmed').length,
-    cancelled: reservations.filter(r => r.status === 'cancelled').length
+  // Calculate feedback status distribution
+  const feedbackStatusData = {
+    unread: customerFeedback.filter(f => !f.read).length,
+    read: customerFeedback.filter(f => f.read).length
   };
 
   // Prepare chart data
@@ -43,20 +42,18 @@ const StatsOverview = ({ orders, reservations, customerFeedback, darkMode }) => 
     }]
   };
 
-  const reservationChartData = {
-    labels: ['Pending', 'Confirmed', 'Cancelled'],
+  const feedbackChartData = {
+    labels: ['Unread', 'Read'],
     datasets: [{
-      label: 'Reservations by Status',
-      data: Object.values(reservationStatusData),
+      label: 'Feedback Status',
+      data: Object.values(feedbackStatusData),
       backgroundColor: [
-        'rgba(255, 206, 86, 0.7)',
-        'rgba(75, 192, 192, 0.7)',
-        'rgba(255, 99, 132, 0.7)'
+        'rgba(255, 99, 132, 0.7)',
+        'rgba(75, 192, 192, 0.7)'
       ],
       borderColor: [
-        'rgba(255, 206, 86, 1)',
-        'rgba(75, 192, 192, 1)',
-        'rgba(255, 99, 132, 1)'
+        'rgba(255, 99, 132, 1)',
+        'rgba(75, 192, 192, 1)'
       ],
       borderWidth: 1
     }]
@@ -113,12 +110,12 @@ const StatsOverview = ({ orders, reservations, customerFeedback, darkMode }) => 
         <div className={`rounded-xl p-6 shadow ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <div className="flex items-center">
             <div className={`p-4 rounded-full ${darkMode ? 'bg-green-900' : 'bg-green-100'} text-green-600 mr-4`}>
-              <FaTable className="text-2xl" />
+              <FaUtensils className="text-2xl" />
             </div>
             <div>
-              <p className={`text-base font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>Today's Reservations</p>
+              <p className={`text-base font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>Pending Orders</p>
               <p className={`text-3xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                {reservations.length}
+                {orders.filter(o => o.status === 'pending').length}
               </p>
             </div>
           </div>
@@ -145,8 +142,8 @@ const StatsOverview = ({ orders, reservations, customerFeedback, darkMode }) => 
           <Bar data={orderChartData} options={chartOptions} />
         </div>
         <div className={`rounded-xl p-6 shadow ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-          <h3 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Reservation Status Distribution</h3>
-          <Bar data={reservationChartData} options={chartOptions} />
+          <h3 className={`text-lg font-medium mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Feedback Status Distribution</h3>
+          <Bar data={feedbackChartData} options={chartOptions} />
         </div>
       </div>
     </div>

@@ -23,8 +23,8 @@ export const auth = async (req, res, next) => {
     // 2) Verify token
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    // 3) Check if user exists
-    const currentUser = await User.findById(decoded.userId);
+    // 3) Check if user exists and get fresh user data with all fields including permissions
+    const currentUser = await User.findById(decoded.userId).select('+active');
     if (!currentUser) {
       return res.status(401).json({
         status: 'fail',
@@ -40,14 +40,28 @@ export const auth = async (req, res, next) => {
       });
     }
 
-    // 5) Update user online status and last seen
-    await User.findByIdAndUpdate(currentUser._id, {
-      isOnline: true,
-      lastSeen: new Date()
-    });
+    // 5) Update user online status and last seen, then get the updated user data
+    const updatedUser = await User.findByIdAndUpdate(
+      currentUser._id, 
+      {
+        isOnline: true,
+        lastSeen: new Date()
+      },
+      { 
+        new: true,
+        select: '+active' // Ensure we get all fields including active status
+      }
+    );
 
-    // Grant access
-    req.user = currentUser;
+    // 6) Ensure we have the most up-to-date user data including role and permissions
+    // This is crucial for staff role updates to take effect immediately
+    req.user = updatedUser;
+    
+    // 7) Add debug logging for role/permission changes (can be removed in production)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Auth: User ${updatedUser.email} - Role: ${updatedUser.role}, Permissions:`, updatedUser.permissions);
+    }
+
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {

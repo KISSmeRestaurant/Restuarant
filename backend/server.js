@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import bodyParser from 'body-parser';
+import session from 'express-session';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -9,6 +10,7 @@ import { dirname } from 'path';
 import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
+import passport from './config/passport.js';
 import adminRoutes from './routes/adminRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import foodRoutes from './routes/foodRoutes.js';
@@ -92,6 +94,21 @@ app.options('*', (req, res) => {
   }
 });
 
+// Session configuration for passport
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-session-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Body parsers
 app.use(express.json({ limit: '10kb' }));
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -117,16 +134,27 @@ app.use((req, res, next) => {
 });
 
 // API Routes - IMPORTANT: Mount these after all middleware but before error handlers
+console.log('🚀 Registering API routes...');
 app.use('/api/auth', authRoutes);
+console.log('✅ Auth routes registered');
 app.use('/api/admin', adminRoutes);
+console.log('✅ Admin routes registered');
 app.use('/api/users', userRoutes);
+console.log('✅ User routes registered');
 app.use('/api/foods', foodRoutes);
+console.log('✅ Food routes registered');
 app.use('/api/categories', categoryRoutes);
+console.log('✅ Category routes registered');
 app.use('/api/orders', orderRoutes);
+console.log('✅ Order routes registered');
 app.use('/api/staff', staffRoutes);
+console.log('✅ Staff routes registered');
 app.use('/api/reservations', reservationRoutes);
+console.log('✅ Reservation routes registered');
 app.use('/api/feedback', feedbackRoutes);
+console.log('✅ Feedback routes registered');
 app.use('/api/tables', tableRoutes);
+console.log('✅ Table routes registered');
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

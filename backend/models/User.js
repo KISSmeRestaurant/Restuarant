@@ -23,15 +23,31 @@ const UserSchema = new mongoose.Schema({
     lowercase: true,
     validate: [validator.isEmail, 'Please provide a valid email']
   },
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true // Allows multiple null values
+  },
+  appwriteId: {
+    type: String,
+    unique: true,
+    sparse: true // Allows multiple null values
+  },
   password: {
     type: String,
-    required: [true, 'Password is required'],
+    required: function() {
+      // Password is required only if googleId or appwriteId is not present
+      return !this.googleId && !this.appwriteId;
+    },
     minlength: [8, 'Password must be at least 8 characters'],
     select: false
   },
   passwordConfirm: {
     type: String,
-    required: [true, 'Please confirm your password'],
+    required: function() {
+      // Password confirmation is required only if password is being set
+      return this.password && this.isModified('password');
+    },
     validate: {
       validator: function(el) {
         return el === this.password;
