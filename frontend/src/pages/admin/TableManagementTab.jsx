@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
+import API_CONFIG from '../../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaTable, 
-  FaPlus, 
-  FaEdit, 
-  FaTrash, 
-  FaUsers, 
+import {
+  FaTable,
+  FaPlus,
+  FaEdit,
+  FaTrash,
+  FaUsers,
   FaMapMarkerAlt,
   FaTimes,
   FaSave
@@ -30,7 +31,7 @@ const TableManagementTab = () => {
     try {
       const token = localStorage.getItem('token');
       // Try localhost first for testing, fallback to production
-      const baseUrl = 'http://localhost:5000/api';
+      const baseUrl = API_CONFIG.BASE_URL;
       const response = await fetch(`${baseUrl}/admin/tables`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -69,11 +70,11 @@ const TableManagementTab = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const baseUrl = 'http://localhost:5000/api';
-      const url = editingTable 
+      const baseUrl = API_CONFIG.BASE_URL;
+      const url = editingTable
         ? `${baseUrl}/admin/tables/${editingTable._id}`
         : `${baseUrl}/admin/tables`;
-      
+
       const method = editingTable ? 'PATCH' : 'POST';
 
       const response = await fetch(url, {
@@ -94,9 +95,9 @@ const TableManagementTab = () => {
       }
 
       const data = await response.json();
-      
+
       if (editingTable) {
-        setTables(tables.map(table => 
+        setTables(tables.map(table =>
           table._id === editingTable._id ? data.data : table
         ));
       } else {
@@ -139,7 +140,7 @@ const TableManagementTab = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const baseUrl = 'http://localhost:5000/api';
+      const baseUrl = API_CONFIG.BASE_URL;
       const response = await fetch(`${baseUrl}/admin/tables/${tableId}`, {
         method: 'DELETE',
         headers: {

@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
+import API_CONFIG from '../../config/api';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaUser, 
-  FaCog, 
-  FaBell, 
-  FaLock, 
-  FaHistory, 
-  FaSave, 
-  FaCheck, 
-  FaEye, 
+import {
+  FaUser,
+  FaCog,
+  FaBell,
+  FaLock,
+  FaHistory,
+  FaSave,
+  FaCheck,
+  FaEye,
   FaEyeSlash,
   FaArrowLeft,
   FaEdit,
@@ -54,9 +55,9 @@ const StaffSettings = () => {
     const loadStaffData = async () => {
       try {
         setLoading(true);
-        
+
         // Fetch staff details
-        const staffResponse = await fetchWithAuth('http://localhost:5000/api/staff/me');
+        const staffResponse = await fetchWithAuth(`${API_CONFIG.BASE_URL}/staff/me`);
         if (staffResponse.ok) {
           const staffData = await staffResponse.json();
           setStaffDetails(staffData.data);
@@ -70,7 +71,7 @@ const StaffSettings = () => {
         }
 
         // Fetch shift history
-        const shiftResponse = await fetchWithAuth('http://localhost:5000/api/staff/shift/history?limit=10');
+        const shiftResponse = await fetchWithAuth(`${API_CONFIG.BASE_URL}/staff/shift/history?limit=10`);
         if (shiftResponse.ok) {
           const shiftData = await shiftResponse.json();
           setShiftHistory(shiftData.data?.shifts || []);
@@ -116,7 +117,7 @@ const StaffSettings = () => {
         phone: formData.phone
       };
 
-      const response = await fetchWithAuth('http://localhost:5000/api/staff/profile', {
+      const response = await fetchWithAuth(`${API_CONFIG.BASE_URL}/staff/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -128,12 +129,12 @@ const StaffSettings = () => {
         const updatedData = await response.json();
         setStaffDetails(updatedData.data);
         setSaveStatus('Profile updated successfully!');
-        
+
         // Update localStorage user data
         const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
         const updatedUser = { ...currentUser, ...updatedData.data };
         localStorage.setItem('user', JSON.stringify(updatedUser));
-        
+
         setTimeout(() => setSaveStatus(''), 3000);
       } else {
         const errorData = await response.json();
@@ -149,7 +150,7 @@ const StaffSettings = () => {
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
-    
+
     if (formData.newPassword !== formData.confirmPassword) {
       setSaveStatus('Error: New passwords do not match');
       return;
@@ -164,7 +165,7 @@ const StaffSettings = () => {
       setSaving(true);
       setSaveStatus('');
 
-      const response = await fetchWithAuth('http://localhost:5000/api/staff/change-password', {
+      const response = await fetchWithAuth(`${API_CONFIG.BASE_URL}/staff/change-password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -242,7 +243,7 @@ const StaffSettings = () => {
               <div className="h-6 border-l border-gray-300"></div>
               <h1 className="text-2xl font-bold text-gray-900">Staff Settings</h1>
             </div>
-            
+
             {staffDetails && (
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
@@ -271,36 +272,32 @@ const StaffSettings = () => {
               <nav className="space-y-1 p-2">
                 <button
                   onClick={() => setActiveTab('profile')}
-                  className={`flex items-center w-full px-4 py-2 text-left rounded-md transition-colors ${
-                    activeTab === 'profile' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  className={`flex items-center w-full px-4 py-2 text-left rounded-md transition-colors ${activeTab === 'profile' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
                 >
                   <FaUser className="mr-3" />
                   Profile Information
                 </button>
                 <button
                   onClick={() => setActiveTab('security')}
-                  className={`flex items-center w-full px-4 py-2 text-left rounded-md transition-colors ${
-                    activeTab === 'security' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  className={`flex items-center w-full px-4 py-2 text-left rounded-md transition-colors ${activeTab === 'security' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
                 >
                   <FaLock className="mr-3" />
                   Security
                 </button>
                 <button
                   onClick={() => setActiveTab('notifications')}
-                  className={`flex items-center w-full px-4 py-2 text-left rounded-md transition-colors ${
-                    activeTab === 'notifications' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  className={`flex items-center w-full px-4 py-2 text-left rounded-md transition-colors ${activeTab === 'notifications' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
                 >
                   <FaBell className="mr-3" />
                   Notifications
                 </button>
                 <button
                   onClick={() => setActiveTab('shifts')}
-                  className={`flex items-center w-full px-4 py-2 text-left rounded-md transition-colors ${
-                    activeTab === 'shifts' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  className={`flex items-center w-full px-4 py-2 text-left rounded-md transition-colors ${activeTab === 'shifts' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
                 >
                   <FaHistory className="mr-3" />
                   Shift History
@@ -323,7 +320,7 @@ const StaffSettings = () => {
                       <MdAccountCircle className="mr-2 text-blue-600" />
                       Profile Information
                     </h3>
-                    
+
                     <form onSubmit={handleProfileUpdate} className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
@@ -341,7 +338,7 @@ const StaffSettings = () => {
                             <FaUser className="absolute left-3 top-3 text-gray-400" />
                           </div>
                         </div>
-                        
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Last Name
@@ -357,7 +354,7 @@ const StaffSettings = () => {
                             <FaUser className="absolute left-3 top-3 text-gray-400" />
                           </div>
                         </div>
-                        
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Email Address
@@ -373,7 +370,7 @@ const StaffSettings = () => {
                             <FaEnvelope className="absolute left-3 top-3 text-gray-400" />
                           </div>
                         </div>
-                        
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Phone Number
@@ -441,7 +438,7 @@ const StaffSettings = () => {
                       <MdSecurity className="mr-2 text-blue-600" />
                       Security Settings
                     </h3>
-                    
+
                     <form onSubmit={handlePasswordChange} className="space-y-6">
                       <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
                         <div className="flex">
@@ -481,7 +478,7 @@ const StaffSettings = () => {
                             </button>
                           </div>
                         </div>
-                        
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             New Password
@@ -503,7 +500,7 @@ const StaffSettings = () => {
                             </button>
                           </div>
                         </div>
-                        
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Confirm New Password
@@ -562,14 +559,14 @@ const StaffSettings = () => {
                       <MdNotifications className="mr-2 text-blue-600" />
                       Notification Preferences
                     </h3>
-                    
+
                     <div className="space-y-6">
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <h4 className="text-md font-medium text-gray-800 mb-3">Notification Settings</h4>
                         <p className="text-sm text-gray-600 mb-4">
                           Choose how you want to receive notifications about your work activities.
                         </p>
-                        
+
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
                             <div>
@@ -583,7 +580,7 @@ const StaffSettings = () => {
                               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                             />
                           </div>
-                          
+
                           <div className="flex items-center justify-between">
                             <div>
                               <label className="text-sm font-medium text-gray-700">Push Notifications</label>
@@ -596,7 +593,7 @@ const StaffSettings = () => {
                               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                             />
                           </div>
-                          
+
                           <div className="flex items-center justify-between">
                             <div>
                               <label className="text-sm font-medium text-gray-700">Order Updates</label>
@@ -609,7 +606,7 @@ const StaffSettings = () => {
                               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                             />
                           </div>
-                          
+
                           <div className="flex items-center justify-between">
                             <div>
                               <label className="text-sm font-medium text-gray-700">Shift Reminders</label>
@@ -650,7 +647,7 @@ const StaffSettings = () => {
                       <MdWork className="mr-2 text-blue-600" />
                       Shift History
                     </h3>
-                    
+
                     <div className="space-y-4">
                       {shiftHistory.length > 0 ? (
                         shiftHistory.map((shift, index) => (
@@ -658,10 +655,9 @@ const StaffSettings = () => {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-4">
                                 <div className="flex-shrink-0">
-                                  <div className={`w-3 h-3 rounded-full ${
-                                    shift.status === 'completed' ? 'bg-green-500' : 
+                                  <div className={`w-3 h-3 rounded-full ${shift.status === 'completed' ? 'bg-green-500' :
                                     shift.status === 'active' ? 'bg-blue-500' : 'bg-gray-400'
-                                  }`}></div>
+                                    }`}></div>
                                 </div>
                                 <div>
                                   <div className="flex items-center space-x-2">
@@ -693,11 +689,10 @@ const StaffSettings = () => {
                                     £{shift.salary.totalEarned.toFixed(2)}
                                   </div>
                                 )}
-                                <div className={`text-xs px-2 py-1 rounded-full inline-block mt-1 ${
-                                  shift.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                <div className={`text-xs px-2 py-1 rounded-full inline-block mt-1 ${shift.status === 'completed' ? 'bg-green-100 text-green-800' :
                                   shift.status === 'active' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
                                   {shift.status}
                                 </div>
                               </div>
@@ -723,9 +718,8 @@ const StaffSettings = () => {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`mt-6 flex items-center px-4 py-2 rounded-md ${
-                    saveStatus.includes('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                  }`}
+                  className={`mt-6 flex items-center px-4 py-2 rounded-md ${saveStatus.includes('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                    }`}
                 >
                   {saveStatus.includes('Error') ? (
                     <span className="text-red-500 mr-2">⚠</span>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import API_CONFIG from '../../config/api';
 import { FaClock, FaUser, FaCalendarAlt, FaEdit, FaTrash, FaEye, FaFilter, FaDownload, FaMoneyBillWave } from 'react-icons/fa';
 import { MdAccessTime, MdPeople, MdTrendingUp } from 'react-icons/md';
 
@@ -38,7 +39,7 @@ const StaffShifts = () => {
     try {
       const [year, month] = selectedMonth.split('-');
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/admin/staff-shifts/monthly-earnings/${year}/${month}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/admin/staff-shifts/monthly-earnings/${year}/${month}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -58,12 +59,12 @@ const StaffShifts = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       const queryParams = new URLSearchParams();
-      
+
       Object.entries(filters).forEach(([key, value]) => {
         if (value) queryParams.append(key, value);
       });
 
-      const response = await fetch(`http://localhost:5000/api/admin/staff-shifts?${queryParams}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/admin/staff-shifts?${queryParams}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -86,11 +87,11 @@ const StaffShifts = () => {
     try {
       const token = localStorage.getItem('token');
       const queryParams = new URLSearchParams();
-      
+
       if (filters.startDate) queryParams.append('startDate', filters.startDate);
       if (filters.endDate) queryParams.append('endDate', filters.endDate);
 
-      const response = await fetch(`http://localhost:5000/api/admin/staff-shifts/stats?${queryParams}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/admin/staff-shifts/stats?${queryParams}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -108,7 +109,7 @@ const StaffShifts = () => {
   const fetchStaffList = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/admin/users', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/admin/users`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -127,7 +128,7 @@ const StaffShifts = () => {
   const handleUpdateShift = async (shiftId, updates) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/admin/staff-shifts/${shiftId}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/admin/staff-shifts/${shiftId}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -153,7 +154,7 @@ const StaffShifts = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/admin/staff-shifts/${shiftId}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/admin/staff-shifts/${shiftId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -417,7 +418,7 @@ const StaffShifts = () => {
           <FaFilter className="text-gray-600" />
           <h3 className="text-lg font-semibold">Filters</h3>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <select
             value={filters.status}
@@ -520,8 +521,8 @@ const StaffShifts = () => {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {shift.status === 'active' ? 
-                      formatDuration(getCurrentDuration(shift)) : 
+                    {shift.status === 'active' ?
+                      formatDuration(getCurrentDuration(shift)) :
                       formatDuration(shift.duration)
                     }
                   </td>
@@ -540,27 +541,26 @@ const StaffShifts = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-col">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        shift.status === 'active' && shift.isReallyActive
-                          ? 'bg-green-100 text-green-800' 
-                          : shift.status === 'active' && !shift.isReallyActive
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${shift.status === 'active' && shift.isReallyActive
+                        ? 'bg-green-100 text-green-800'
+                        : shift.status === 'active' && !shift.isReallyActive
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {shift.status === 'active' && shift.isReallyActive 
-                          ? 'Active & Online' 
+                        }`}>
+                        {shift.status === 'active' && shift.isReallyActive
+                          ? 'Active & Online'
                           : shift.status === 'active' && !shift.isReallyActive
-                          ? 'On Shift (Offline)'
-                          : 'Completed'
+                            ? 'On Shift (Offline)'
+                            : 'Completed'
                         }
                       </span>
                       {shift.status === 'active' && shift.staffOnlineStatus && (
                         <span className="text-xs text-gray-500 mt-1">
-                          {shift.staffOnlineStatus.isRecentlyActive 
-                            ? 'Online now' 
-                            : shift.staffOnlineStatus.lastSeen 
-                            ? `Last seen: ${new Date(shift.staffOnlineStatus.lastSeen).toLocaleTimeString()}`
-                            : 'Never online'
+                          {shift.staffOnlineStatus.isRecentlyActive
+                            ? 'Online now'
+                            : shift.staffOnlineStatus.lastSeen
+                              ? `Last seen: ${new Date(shift.staffOnlineStatus.lastSeen).toLocaleTimeString()}`
+                              : 'Never online'
                           }
                         </span>
                       )}
@@ -635,7 +635,7 @@ const EditShiftModal = ({ shift, onClose, onUpdate }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
         <h3 className="text-lg font-semibold mb-4">Edit Shift</h3>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

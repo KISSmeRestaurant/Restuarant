@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import API_CONFIG from '../../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaTable, 
-  FaCalendarAlt, 
-  FaEye, 
-  FaPrint, 
+import {
+  FaTable,
+  FaCalendarAlt,
+  FaEye,
+  FaPrint,
   FaTimes,
   FaUsers,
   FaUtensils,
@@ -34,7 +35,7 @@ const TableAnalyticsTab = () => {
   const fetchTables = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/admin/tables', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/admin/tables`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -60,7 +61,7 @@ const TableAnalyticsTab = () => {
         ...(selectedTable !== 'all' && { tableId: selectedTable })
       });
 
-      const response = await fetch(`http://localhost:5000/api/admin/tables/orders?${params}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/admin/tables/orders?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -88,7 +89,7 @@ const TableAnalyticsTab = () => {
   const handleViewBill = async (order) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/tables/${order.table._id}/bill`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/tables/${order.table._id}/bill`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -278,7 +279,7 @@ const TableAnalyticsTab = () => {
 
     printWindow.document.write(printContent);
     printWindow.document.close();
-    
+
     setTimeout(() => {
       printWindow.print();
       printWindow.close();
@@ -301,7 +302,7 @@ const TableAnalyticsTab = () => {
   const dailyStats = {
     totalOrders: tableOrders.length,
     totalRevenue: tableOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
-    averageOrderValue: tableOrders.length > 0 ? 
+    averageOrderValue: tableOrders.length > 0 ?
       tableOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0) / tableOrders.length : 0,
     tablesUsed: new Set(tableOrders.map(order => order.table?._id)).size
   };
@@ -344,7 +345,7 @@ const TableAnalyticsTab = () => {
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <FaFilter className="text-gray-500" />
             <label className="text-sm font-medium text-gray-700">Table:</label>
@@ -560,7 +561,7 @@ const TableAnalyticsTab = () => {
                       <div><strong>Table:</strong> {selectedOrder.table?.tableNumber || 'N/A'}</div>
                       <div><strong>Customer:</strong> {selectedOrder.deliveryInfo?.name || 'N/A'}</div>
                       <div><strong>Phone:</strong> {selectedOrder.deliveryInfo?.phone || 'N/A'}</div>
-                      <div><strong>Status:</strong> 
+                      <div><strong>Status:</strong>
                         <span className={`ml-2 px-2 py-1 text-xs rounded-full ${getStatusColor(selectedOrder.status)}`}>
                           {selectedOrder.status}
                         </span>

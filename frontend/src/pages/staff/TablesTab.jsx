@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import API_CONFIG from '../../config/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaTable, 
-  FaUsers, 
-  FaPlus, 
-  FaTimes, 
+import {
+  FaTable,
+  FaUsers,
+  FaPlus,
+  FaTimes,
   FaUtensils,
   FaShoppingCart,
   FaCheck,
@@ -37,7 +38,7 @@ const TablesTab = ({ darkMode }) => {
   const fetchTables = async () => {
     try {
       const token = localStorage.getItem('token');
-      const baseUrl = 'http://localhost:5000/api';
+      const baseUrl = API_CONFIG.BASE_URL;
       const response = await fetch(`${baseUrl}/tables`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -61,7 +62,7 @@ const TablesTab = ({ darkMode }) => {
   const fetchFoodItems = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('https://restuarant-sh57.onrender.com/api/foods', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/foods`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -94,7 +95,7 @@ const TablesTab = ({ darkMode }) => {
   // Add item to order
   const addItemToOrder = (foodItem) => {
     const existingItem = orderItems.find(item => item.food._id === foodItem._id);
-    
+
     if (existingItem) {
       setOrderItems(orderItems.map(item =>
         item.food._id === foodItem._id
@@ -121,7 +122,7 @@ const TablesTab = ({ darkMode }) => {
       removeItemFromOrder(foodId);
       return;
     }
-    
+
     setOrderItems(orderItems.map(item =>
       item.food._id === foodId
         ? { ...item, quantity }
@@ -148,7 +149,7 @@ const TablesTab = ({ darkMode }) => {
 
     try {
       const token = localStorage.getItem('token');
-      
+
       // Create order
       const orderData = {
         items: orderItems.map(item => ({
@@ -167,7 +168,7 @@ const TablesTab = ({ darkMode }) => {
         totalAmount: calculateTotal()
       };
 
-      const response = await fetch('https://restuarant-sh57.onrender.com/api/orders', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/orders`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -184,7 +185,7 @@ const TablesTab = ({ darkMode }) => {
       const order = await response.json();
 
       // Update table status
-      const baseUrl = 'http://localhost:5000/api';
+      const baseUrl = API_CONFIG.BASE_URL;
       await fetch(`${baseUrl}/tables/${selectedTable._id}/assign-order`, {
         method: 'PATCH',
         headers: {
@@ -196,11 +197,11 @@ const TablesTab = ({ darkMode }) => {
 
       // Refresh tables
       await fetchTables();
-      
+
       // Close modal
       setShowOrderModal(false);
       setSelectedTable(null);
-      
+
       alert('Order created successfully!');
     } catch (err) {
       setError(err.message);
@@ -213,7 +214,7 @@ const TablesTab = ({ darkMode }) => {
       alert('This table does not have an active order');
       return;
     }
-    
+
     setSelectedTable(table);
     setCurrentOrder(table.currentOrder);
     setShowAddMoreModal(true);
@@ -223,7 +224,7 @@ const TablesTab = ({ darkMode }) => {
   // Add item to add more items list
   const addItemToAddMore = (foodItem) => {
     const existingItem = addMoreItems.find(item => item.food._id === foodItem._id);
-    
+
     if (existingItem) {
       setAddMoreItems(addMoreItems.map(item =>
         item.food._id === foodItem._id
@@ -250,7 +251,7 @@ const TablesTab = ({ darkMode }) => {
       removeItemFromAddMore(foodId);
       return;
     }
-    
+
     setAddMoreItems(addMoreItems.map(item =>
       item.food._id === foodId
         ? { ...item, quantity }
@@ -272,8 +273,8 @@ const TablesTab = ({ darkMode }) => {
 
     try {
       const token = localStorage.getItem('token');
-      const baseUrl = 'http://localhost:5000/api';
-      
+      const baseUrl = API_CONFIG.BASE_URL;
+
       const itemsData = addMoreItems.map(item => ({
         food: item.food._id,
         quantity: item.quantity,
@@ -296,13 +297,13 @@ const TablesTab = ({ darkMode }) => {
 
       // Refresh tables
       await fetchTables();
-      
+
       // Close modal
       setShowAddMoreModal(false);
       setSelectedTable(null);
       setCurrentOrder(null);
       setAddMoreItems([]);
-      
+
       alert('Items added to order successfully!');
     } catch (err) {
       setError(err.message);
@@ -313,7 +314,7 @@ const TablesTab = ({ darkMode }) => {
   const updateTableStatus = async (tableId, status) => {
     try {
       const token = localStorage.getItem('token');
-      const baseUrl = 'http://localhost:5000/api';
+      const baseUrl = API_CONFIG.BASE_URL;
       const response = await fetch(`${baseUrl}/tables/${tableId}/status`, {
         method: 'PATCH',
         headers: {
@@ -395,20 +396,20 @@ const TablesTab = ({ darkMode }) => {
                 <div className="flex justify-center mb-2">
                   {getStatusIcon(table.status)}
                 </div>
-                
+
                 <h4 className="font-semibold text-lg mb-1">
                   Table {table.tableNumber}
                 </h4>
-                
+
                 <div className="flex items-center justify-center text-sm mb-2">
                   <FaUsers className="mr-1" />
                   <span>{table.capacity} seats</span>
                 </div>
-                
+
                 <div className="text-xs mb-3 capitalize">
                   {table.location}
                 </div>
-                
+
                 <div className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(table.status)}`}>
                   {table.status}
                 </div>
@@ -424,7 +425,7 @@ const TablesTab = ({ darkMode }) => {
                       Take Order
                     </button>
                   )}
-                  
+
                   {table.status === 'occupied' && (
                     <>
                       <button
@@ -442,7 +443,7 @@ const TablesTab = ({ darkMode }) => {
                       </button>
                     </>
                   )}
-                  
+
                   {table.status === 'cleaning' && (
                     <button
                       onClick={() => updateTableStatus(table._id, 'available')}
@@ -522,27 +523,27 @@ const TablesTab = ({ darkMode }) => {
                 {/* Order Summary */}
                 <div className="w-80 p-6 bg-gray-50">
                   <h4 className="font-semibold mb-4">Order Summary</h4>
-                  
+
                   {/* Customer Info */}
                   <div className="mb-4 space-y-2">
                     <input
                       type="text"
                       placeholder="Customer Name *"
                       value={customerInfo.name}
-                      onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
+                      onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
                       className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <input
                       type="text"
                       placeholder="Phone Number"
                       value={customerInfo.phone}
-                      onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
+                      onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
                       className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <textarea
                       placeholder="Special Notes"
                       value={customerInfo.notes}
-                      onChange={(e) => setCustomerInfo({...customerInfo, notes: e.target.value})}
+                      onChange={(e) => setCustomerInfo({ ...customerInfo, notes: e.target.value })}
                       className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 h-20 resize-none"
                     />
                   </div>
@@ -659,7 +660,7 @@ const TablesTab = ({ darkMode }) => {
                 {/* Add More Items Summary */}
                 <div className="w-80 p-6 bg-gray-50">
                   <h4 className="font-semibold mb-4">Additional Items</h4>
-                  
+
                   {/* Current Order Info */}
                   {currentOrder && (
                     <div className="mb-4 p-3 bg-blue-50 rounded-lg">

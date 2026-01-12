@@ -1,18 +1,26 @@
+// Helper to ensure API URL has /api suffix
+const getApiBaseUrl = () => {
+  // Force localhost for testing the fix locally since Render is not deployed yet
+  return 'http://localhost:5000/api';
+
+  // const envUrl = import.meta.env.VITE_API_BASE_URL;
+  // if (!envUrl) return 'http://localhost:5000/api';
+  // return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+};
+
 // API Configuration
 const API_CONFIG = {
-  // Use localhost for development/testing, production URL for deployed version
-  BASE_URL: process.env.NODE_ENV === 'production' 
-    ? 'https://restuarant-sh57.onrender.com/api'
-    : 'http://localhost:5000/api',
-  
-  // Fallback to production if localhost fails
+  // Use environment variable from .env file with robust handling
+  BASE_URL: getApiBaseUrl(),
+
+  // Fallback to production if primary fails (keeping the same as configured in env or default hardcoded one as last resort)
   FALLBACK_URL: 'https://restuarant-sh57.onrender.com/api'
 };
 
 // Check if token is expired
 const isTokenExpired = (token) => {
   if (!token) return true;
-  
+
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     const currentTime = Date.now() / 1000;
@@ -25,7 +33,7 @@ const isTokenExpired = (token) => {
 // Enhanced fetch function with fallback logic and proper auth handling
 export const apiRequest = async (endpoint, options = {}) => {
   const token = localStorage.getItem('token');
-  
+
   // Check if token is expired
   if (token && isTokenExpired(token)) {
     localStorage.removeItem('token');
@@ -33,7 +41,7 @@ export const apiRequest = async (endpoint, options = {}) => {
     window.location.href = '/login';
     throw new Error('Token expired');
   }
-  
+
   const defaultOptions = {
     headers: {
       'Content-Type': 'application/json',
@@ -46,7 +54,7 @@ export const apiRequest = async (endpoint, options = {}) => {
   // Helper function to try a URL
   const tryFetch = async (url) => {
     const response = await fetch(url, defaultOptions);
-    
+
     // Handle authentication errors
     if (response.status === 401) {
       localStorage.removeItem('token');
@@ -54,7 +62,7 @@ export const apiRequest = async (endpoint, options = {}) => {
       window.location.href = '/login';
       throw new Error('Authentication failed');
     }
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       let errorMessage;
@@ -66,7 +74,7 @@ export const apiRequest = async (endpoint, options = {}) => {
       }
       throw new Error(errorMessage);
     }
-    
+
     return response;
   };
 
@@ -75,12 +83,12 @@ export const apiRequest = async (endpoint, options = {}) => {
     return await tryFetch(`${API_CONFIG.BASE_URL}${endpoint}`);
   } catch (error) {
     console.warn(`Primary API failed (${API_CONFIG.BASE_URL}), trying fallback...`, error.message);
-    
+
     // Try fallback URL if primary fails (but not for auth errors)
     if (error.message.includes('Authentication failed') || error.message.includes('Token expired')) {
       throw error;
     }
-    
+
     try {
       return await tryFetch(`${API_CONFIG.FALLBACK_URL}${endpoint}`);
     } catch (fallbackError) {

@@ -26,103 +26,103 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-const fetchAdminData = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      navigate('/login');
-      return;
-    }
+    const fetchAdminData = async () => {
+      try {
+        const token = localStorage.getItem('token');
 
-    // Fetch admin details
-    const adminResponse = await fetch('https://restuarant-sh57.onrender.com/api/admin/me', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+        if (!token) {
+          navigate('/login');
+          return;
+        }
 
-    if (!adminResponse.ok) {
-      if (adminResponse.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
-        return;
+        // Fetch admin details
+        const adminResponse = await fetch('https://restuarant-sh57.onrender.com/api/admin/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!adminResponse.ok) {
+          if (adminResponse.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            navigate('/login');
+            return;
+          }
+          throw new Error('Failed to fetch admin details');
+        }
+
+        const adminData = await adminResponse.json();
+        const adminDetails = adminData.data ? adminData.data : adminData;
+
+        setAdmin({
+          firstName: adminDetails.firstName,
+          lastName: adminDetails.lastName,
+          email: adminDetails.email,
+          phone: adminDetails.phone,
+          postcode: adminDetails.postcode,
+          createdAt: adminDetails.createdAt,
+          lastLogin: adminDetails.lastLogin || new Date(),
+          role: adminDetails.role
+        });
+
+        // Fetch food items and categories in parallel
+        const [foodResponse, categoriesResponse] = await Promise.all([
+          fetch('https://restuarant-sh57.onrender.com/api/foods', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          }),
+          fetch('https://restuarant-sh57.onrender.com/api/categories', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          })
+        ]);
+
+        if (!foodResponse.ok || !categoriesResponse.ok) {
+          throw new Error('Failed to fetch data');
+        }
+
+        const foodData = await foodResponse.json();
+        const categoriesData = await categoriesResponse.json();
+
+        setFoodItems(foodData);
+        setCategories(categoriesData);
+      } catch (err) {
+        console.error('Fetch error:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-      throw new Error('Failed to fetch admin details');
-    }
+    };
 
-    const adminData = await adminResponse.json();
-    const adminDetails = adminData.data ? adminData.data : adminData;
-    
-    setAdmin({
-      firstName: adminDetails.firstName,
-      lastName: adminDetails.lastName,
-      email: adminDetails.email,
-      phone: adminDetails.phone,
-      postcode: adminDetails.postcode,
-      createdAt: adminDetails.createdAt,
-      lastLogin: adminDetails.lastLogin || new Date(),
-      role: adminDetails.role
-    });
-
-    // Fetch food items and categories in parallel
-    const [foodResponse, categoriesResponse] = await Promise.all([
-      fetch('https://restuarant-sh57.onrender.com/api/foods', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      }),
-      fetch('https://restuarant-sh57.onrender.com/api/categories', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-    ]);
-
-    if (!foodResponse.ok || !categoriesResponse.ok) {
-      throw new Error('Failed to fetch data');
-    }
-
-    const foodData = await foodResponse.json();
-    const categoriesData = await categoriesResponse.json();
-    
-    setFoodItems(foodData);
-    setCategories(categoriesData);
-  } catch (err) {
-    console.error('Fetch error:', err);
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
-    
     fetchAdminData();
   }, [navigate]);
 
   useEffect(() => {
-  const fetchReservations = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://restuarant-sh57.onrender.com/api/reservations', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      const data = await response.json();
-      if (response.ok) {
-        setReservations(data);
-      } else {
-        throw new Error(data.message || 'Failed to fetch reservations');
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    const fetchReservations = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('https://restuarant-sh57.onrender.com/api/reservations', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-  fetchReservations();
-}, []);
+        const data = await response.json();
+        if (response.ok) {
+          setReservations(data);
+        } else {
+          throw new Error(data.message || 'Failed to fetch reservations');
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchReservations();
+  }, []);
 
   const handleAddFood = async (e, newFood, setNewFood, setShowAddFoodForm) => {
     e.preventDefault();
@@ -135,7 +135,7 @@ const fetchAdminData = async () => {
       formData.append('price', newFood.price);
       formData.append('category', newFood.category);
       formData.append('foodType', newFood.foodType);
-      
+
       if (newFood.image) {
         if (!['image/jpeg', 'image/png', 'image/jpg'].includes(newFood.image.type)) {
           throw new Error('Only JPEG, JPG, or PNG images are allowed');
@@ -193,20 +193,27 @@ const fetchAdminData = async () => {
     }
   };
 
+  const handleFoodUpdate = (updatedFood) => {
+    // Update the food item in the foodItems array
+    setFoodItems(foodItems.map(item =>
+      item._id === updatedFood._id ? updatedFood : item
+    ));
+  };
+
   return (
     <div className="fixed inset-0 flex bg-gray-100 z-40">
       <div className="flex h-full w-full">
-        <Sidebar 
-          sidebarOpen={sidebarOpen} 
-          setSidebarOpen={setSidebarOpen} 
-          activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
+        <Sidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
         />
-        
+
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="h-16"></div> {/* Spacer for navbar */}
           <Header activeTab={activeTab} admin={admin} />
-          
+
           <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
             {error && (
               <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
@@ -219,14 +226,15 @@ const fetchAdminData = async () => {
             )}
 
             {activeTab === 'food' && (
-              <FoodManagementTab 
-                foodItems={foodItems} 
+              <FoodManagementTab
+                foodItems={foodItems}
                 error={error}
                 setError={setError}
                 handleAddFood={handleAddFood}
                 handleDeleteFood={handleDeleteFood}
                 categories={categories}
                 setCategories={setCategories}
+                onFoodUpdate={handleFoodUpdate}
               />
             )}
 
@@ -235,7 +243,7 @@ const fetchAdminData = async () => {
                 <Users />
               </div>
             )}
-            
+
             {activeTab === 'orders' && (
               <div className="mb-8">
                 <Orders />
