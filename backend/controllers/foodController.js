@@ -4,14 +4,21 @@ import cloudinary from '../config/cloudinary.js';
 export const addFoodItem = async (req, res) => {
   try {
     const { name, description, price, category, foodType } = req.body;
-    
+
     if (!name || !price || !category || !foodType) {
       return res.status(400).json({ message: 'Required fields are missing' });
     }
 
     let imageUrl = null;
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path);
+      // Convert buffer to base64 for Cloudinary
+      const b64 = Buffer.from(req.file.buffer).toString("base64");
+      const dataURI = "data:" + req.file.mimetype + ";base64," + b64;
+
+      const result = await cloudinary.uploader.upload(dataURI, {
+        folder: 'restaurant/foods',
+        public_id: `food-${Date.now()}`,
+      });
       imageUrl = result.secure_url;
     }
 
@@ -70,10 +77,10 @@ export const updateFoodItem = async (req, res) => {
     console.log('Food ID:', req.params.id);
     console.log('Request body:', req.body);
     console.log('User:', req.user?.email);
-    
+
     const { name, description, price, category, foodType } = req.body;
     const foodId = req.params.id;
-    
+
     if (!name || !price || !category || !foodType) {
       console.log('Missing required fields');
       return res.status(400).json({ message: 'Required fields are missing' });
@@ -89,11 +96,19 @@ export const updateFoodItem = async (req, res) => {
     console.log('Existing food found:', existingFood.name);
 
     let imageUrl = existingFood.imageUrl; // Keep existing image by default
-    
+
     // If a new image is uploaded, upload to cloudinary
     if (req.file) {
       console.log('New image uploaded, uploading to cloudinary');
-      const result = await cloudinary.uploader.upload(req.file.path);
+
+      // Convert buffer to base64
+      const b64 = Buffer.from(req.file.buffer).toString("base64");
+      const dataURI = "data:" + req.file.mimetype + ";base64," + b64;
+
+      const result = await cloudinary.uploader.upload(dataURI, {
+        folder: 'restaurant/foods',
+        public_id: `food-${Date.now()}`,
+      });
       imageUrl = result.secure_url;
     }
 
